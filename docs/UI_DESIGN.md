@@ -90,6 +90,7 @@ propia arquitectura declara (ver 3.2).
 | Fondo de marca | `azul_claro` | `#E8F0FB` | Fondo de pastilla informativa, fila seleccionada |
 | Fondo de página | `fondo` | `#F5F7FA` | Fondo general de la zona de contenido |
 | Superficie | `superficie` | `#FFFFFF` | Tarjetas, diálogos, cabeceras de tabla |
+| Fila con el cursor encima | `hover_fila` | `#EEF2F8` | Fondo de fila de tabla al pasar el cursor (nuevo) |
 | Separador suave | `borde_suave` | `#E6EBF2` | Divisores internos, fondos de fila alterna |
 | Borde decorativo | `borde` | `#D8DEE7` | Borde de tarjeta, borde de campo deshabilitado |
 | Borde de control | `borde_fuerte` | `#828D9E` | Borde de campo de formulario y de botón secundario (nuevo) |
@@ -117,7 +118,7 @@ delicadas, que son las que hay que vigilar al maquetar:
 |-------------|-------|--------|------|
 | Texto principal sobre superficie | 15.65:1 | 4.5 | holgado |
 | Texto secundario sobre superficie | 5.87:1 | 4.5 | justo, no bajar el color |
-| Texto secundario sobre fila resaltada | 5.22:1 | 4.5 | el resaltado no puede aclarar mucho el texto |
+| Texto secundario sobre fila con el cursor encima (`hover_fila`) | 5.22:1 | 4.5 | el resaltado no puede aclarar mucho el texto |
 | Texto de la barra lateral, elemento activo | 5.07:1 | 4.5 | el activo es el de menor margen |
 | Pastilla «dañado» (texto sobre fondo ámbar) | 4.94:1 | 4.5 | ver aviso siguiente |
 | Pastilla «pendiente» neutra | 4.90:1 | 4.5 | |
@@ -411,6 +412,7 @@ ellas no bastaría.
 | Atajo | Acción |
 |-------|--------|
 | `Ctrl+1` … `Ctrl+6` | Ir a la sección principal correspondiente |
+| `Ctrl+7` | Ir a Incidentes (entrada secundaria) |
 | `Ctrl+N` | Nuevo registro, en la sección activa (artículo, estudiante, préstamo…) |
 | `Ctrl+F` | Enfocar el buscador de la sección activa |
 | `Ctrl+S` | Guardar, si la sección tiene un formulario abierto |
@@ -568,7 +570,7 @@ materializan. Widgets nativos de `QtWidgets`, sin QML, como ya está decidido.
 | Concepto de diseño | Widget de PySide6 | Nota |
 |--------------------|-------------------|------|
 | Ventana con menú lateral y páginas | `QMainWindow` + `QStackedWidget` | Ya decidido en la arquitectura |
-| Menú lateral | `QListWidget` con `QListView` customised, o lista propia sobre `QAbstractListModel` | `ListView` de Qt se ve genérica; conviene un delegate propio |
+| Menú lateral | `QListWidget` con `QListView` personalizado, o lista propia sobre `QAbstractListModel` | `ListView` de Qt se ve genérica; conviene un delegate propio |
 | Barra de herramientas de sección | `QWidget` con `QHBoxLayout` | No usar `QToolBar`: su aspecto nativo rompe el tema |
 | Tabla | `QTableView` + `QAbstractTableModel` | Nunca `QTableWidget` (decidido en la arquitectura) |
 | Pastilla de estado | `QStyledItemDelegate` | Permite el fondo redondeado y el texto centrado |
@@ -640,6 +642,8 @@ diseño y lo que hace falta decidir.
 | **C-6** | El prompt pide distinguir «préstamos activos, vencidos e incidentes pendientes», pero RN-25, ADR-04 y RF-ALA-03 establecen que no se marca vencido nada mientras no exista `fecha_limite` | Prompt 3 §4 frente a RN-25 y RF-ALA-03 | No hay categoría «vencido» en el Panel. En su lugar, «pendiente de devolución». El estado «vencido» existe en el modelo, pero se muestra solo si algún día hay `fecha_limite` | Ninguno: el prompt y las reglas coinciden. Se documenta para que no se implemente por inercia una etiqueta de «vencido» que el sistema no puede calcular |
 | **C-7** | El prompt pide cinco cifras en el Panel y la quinta es «préstamos que necesitan atención». RF-DAS-01 a RF-DAS-05 también definen cinco cifras, y la quinta es «incidentes registrados» | Prompt 3 §4 frente a RF-DAS-05 | Las cinco tarjetas siguen a RF-DAS-01…RF-DAS-05, porque son requisitos con criterio de aceptación verificable. «Préstamos que necesitan atención» se añade como lista. Así se cumplen las cinco cifras del prompt y ningún requisito queda sin tarjeta | Confirmar que el Panel con cinco tarjetas más una lista es aceptable, o si Sonia prefiere sustituir la quinta tarjeta por el recuento de préstamos que necesitan atención |
 | **C-8** | `ARCHITECTURE.md` indicaba que los mensajes y errores se muestran con `QMessageBox`, mientras que este diseño y `UI_COMPONENTS.md` usan `ConfirmDialog`, `InlineNotice` y avisos flotantes propios | `ARCHITECTURE.md` §7 frente a `UI_DESIGN.md` §9 y `UI_COMPONENTS.md` | Gana este diseño: `QMessageBox` no admite ni el nombre del registro, ni botón con verbo propio, ni doble confirmación. Los mensajes salen por los componentes de `UI_COMPONENTS.md` | Ninguno. Es una decisión técnica, no una regla de negocio, así que `ARCHITECTURE.md` §7 se ha actualizado para que ambos documentos digan lo mismo |
+| **C-9** | El criterio de la sección 6.3 dice que toda operación que altera devoluciones pide confirmación, pero el flujo de devolución de `UI_FLOWS.md` §4.1 registra la devolución **sin** confirmación cuando no hay daños ni pérdidas («Confirmación, solo si algo se pierde o se daña») | `UI_DESIGN.md` §6.3 frente a `UI_FLOWS.md` §4.1 | Posible arreglo en los dos sentidos: (a) la devolución total de un préstamo sí pide confirmación con el resumen de unidades, y la parcial sin novedad no; o (b) la 6.3 se matiza para que la devolución sin novedad entre en «Registra datos nuevos…» | Decidir cuál gana. Es el mismo asunto que la pregunta Q1 de `UI_FLOWS.md` §12, ya abierta; se registra aquí para que no se pierda |
+| **C-10** | El mismo criterio de la 6.3 exige confirmación para lo que altera incidentes, pero el registro de un incidente (`UI_FLOWS.md` §8.1) usa un `InlineNotice` dentro del formulario en lugar de un `ConfirmDialog` final | `UI_DESIGN.md` §6.3 frente a `UI_FLOWS.md` §8.1 | `UI_FLOWS.md` argumenta que el aviso en línea cumple RNF-02 porque Sonia ve la consecuencia mientras rellena, y que un «Cancelar» al final obligaría a retroceder seis campos | Confirmar que el aviso en línea es aceptable para RNF-02, o exigir además la confirmación final. **Pendiente de decisión, no se ha cambiado nada** |
 
 ---
 

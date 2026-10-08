@@ -34,14 +34,15 @@ sí:
 | # | Pantalla | Requisitos principales |
 |---|----------|------------------------|
 | 2 | [Panel](#2-panel) | RF-DAS-01…06, RF-ALA-01…04 |
-| 3 | [Inventario](#3-inventario) | RF-INV-01…11, RF-INV-02 (categorías) |
+| 3 | [Inventario](#3-inventario) | RF-INV-01…11 (la pestaña Categorías cubre RF-INV-02) |
 | 4 | [Estudiantes](#4-estudiantes) | RF-EST-01…06 |
 | 5 | [Préstamos](#5-préstamos) | RF-PRE-01…09 |
 | 6 | [Devoluciones](#6-devoluciones) | RF-DEV-01…11 |
 | 7 | [Reportes](#7-reportes) | RF-REP-01…06 |
-| 8 | [Incidentes](#8-incidentes-sección-secundaria) | RF-DEV-05, RF-DEV-09, RF-DEV-10, RF-ALA-02 |
-| 9 | [Respaldo](#9-respaldo-sección-secundaria) | RNF-13, RNF-12 |
-| 10 | [Configuración](#10-configuración-sección-secundaria) | RF-INV-08, RNF-11 |
+| 8 | [Incidentes](#8-incidentes-sección-secundaria) | RF-DEV-05, RF-DEV-09, RF-DEV-10, RF-ALA-02, RF-ALA-04 |
+| 9 | [Respaldo](#9-respaldo-sección-secundaria) | RNF-13, RNF-12, RNF-11 |
+| 10 | [Configuración](#10-configuración-sección-secundaria) | RF-INV-08, RNF-11, RNF-18 |
+| 11 | [Categorías](#11-categorías) (pestaña de Inventario) | RF-INV-02 |
 
 ---
 
@@ -590,6 +591,11 @@ del historial del estudiante.
 El botón dice «Anular préstamo», no «Aceptar». Si el préstamo ya tiene devoluciones,
 el botón está deshabilitado y el motivo se escribe al lado: «Este préstamo tiene
 devoluciones registradas y no se puede anular».
+
+El dibujo anterior es **la primera** de las dos confirmaciones. La segunda, donde
+hay que escribir **ANULAR** en un campo para habilitar el botón, está en el
+recorrido completo de `UI_FLOWS.md` sección 7 (y en `UI_COMPONENTS.md` 5.3); aquí
+solo se documenta la primera para no repetir el mismo diálogo dos veces.
 
 ### 5.7 Estados
 

@@ -74,10 +74,13 @@ de forma que se puedan maquetar tal cual, y las decisiones pendientes solo afect
 casos concretos señalados uno por uno.
 
 **Estado:** completada como propuesta, pendiente de aprobación. El repositorio git
-ya está inicializado (`.gitignore` creado) y el modelo de datos está verificado
-ejecutando su DDL sobre una base en memoria: 11 tablas, 2 vistas, 13 índices y los
-`CHECK` de integridad rechazan lo que deben. El diseño de interfaz está escrito como
-propuesta, **sin ninguna pantalla implementada ni maquetada**.
+está inicializado con su primer commit ya publicado en `origin/main`. El modelo de
+datos está verificado ejecutando su DDL **y sus consultas de referencia** sobre una
+base en memoria: 11 tablas, 2 vistas, 13 índices, `PRAGMA foreign_key_check` sin
+violaciones y los `CHECK` de integridad rechazan lo que deben. La documentación
+consolidada corresponde a la revisión 3 de `DATABASE_DESIGN.md`. El diseño de
+interfaz está escrito como propuesta, **sin ninguna pantalla implementada ni
+maquetada**.
 
 ---
 
@@ -339,7 +342,7 @@ resulta que ningún equipo lo necesita, la tabla simplemente queda vacía.
 | R-12 | Requisitos que cambian a mitad del desarrollo | Medio | Media | Reglas y requisitos con código estable; cada cambio se incorpora en la etapa correspondiente |
 | R-13 | Un daño o una pérdida en la facultad no tiene forma de registrarse porque no hay préstamo | Bajo | Baja | **Cubierto en el diseño:** `incidente` acepta `origen = 'stock'` sin `prestamo_id` ni estudiante (RN-54) |
 | R-14 | Una migración defectuosa daña la base de producción | Muy alto | Baja | Copia previa obligatoria, migración probada desde la versión anterior, verificación posterior |
-| R-15 | El proyecto queda sin control de versiones | Medio | Baja | **Ya mitigado:** repositorio inicializado en la etapa 0 con `.gitignore` |
+| R-15 | El proyecto queda sin control de versiones | Medio | Baja | **Ya mitigado:** repositorio inicializado en la etapa 0 con `.gitignore` y primer commit publicado en `origin/main` |
 
 ---
 
@@ -434,7 +437,7 @@ que quedaban planteados:
 | `UI_DESIGN.md` | ¿El agrupamiento de las secciones del menú es el que espera Sonia? ¿Acepta el tono de advertencia más oscuro que hace falta para cumplir el contraste? |
 | `UI_SCREENS.md` | ¿La separación entre el Panel y Reportes es la esperada? ¿Las cinco tarjetas del Panel son las que necesita? |
 | `UI_COMPONENTS.md` | ¿Falta algún componente? ¿Alguno sobra? |
-| `UI_FLOWS.md` | Las 10 preguntas de la sección 12, sobre todo la 1: ¿una devolución sin daños necesita confirmación? |
+| `UI_FLOWS.md` | Las 11 preguntas de la sección 12, sobre todo la 1: ¿una devolución sin daños necesita confirmación? |
 
 ### 8.4 Antes de la primera línea de código
 

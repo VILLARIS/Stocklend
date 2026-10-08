@@ -43,25 +43,26 @@ la pantalla correspondiente, en `UI_SCREENS.md`.
 | 3 | `DataTable` | Presentación | Todas las de listado |
 | 4 | `QuantityCell` | Presentación | Inventario, Préstamos, Devoluciones, Reportes |
 | 5 | `StatusChip` | Presentación | Inventario, Préstamos, Devoluciones, Incidentes |
-| 6 | `SearchBar` | Entrada | Todas las de listado |
-| 7 | `FilterBar` | Entrada | Reportes, Inventario |
-| 8 | `FormField` | Entrada | Todos los formularios |
-| 9 | `QuantityInput` | Entrada | Préstamos, Devoluciones, Inventario |
-| 10 | `UnitSelector` | Entrada | Préstamos, Devoluciones, Inventario |
-| 11 | `TextArea` | Entrada | Formularios de nota y comentario |
-| 12 | `Toolbar` | Estructural | Todas las de listado |
-| 13 | `TabBar` | Estructural | Inventario, Reportes, Configuración |
-| 14 | `DetailPanel` | Estructural | Inventario, Estudiantes, Préstamos, Incidentes |
-| 15 | `KeyValueList` | Presentación | `DetailPanel`, diálogos de ficha |
-| 16 | `EmptyState` | Estado | Todas |
-| 17 | `InlineNotice` | Estado | Todas |
-| 18 | `ConfirmDialog` | Diálogo | Todas |
-| 19 | `FormDialog` | Diálogo | Todos los formularios |
-| 20 | `Toast` | Estado | Todas |
-| 21 | `RowMenu` | Entrada | Todas las tablas |
-| 22 | `CountBadge` | Presentación | Navegación |
-| 23 | `LoadingSkeleton` | Estado | Todas |
-| 24 | `Button` | Entrada | Todas |
+| 6 | `UnitCodeBadge` | Presentación | Inventario, Préstamos, Devoluciones, Incidentes |
+| 7 | `SearchBar` | Entrada | Todas las de listado |
+| 8 | `FilterBar` | Entrada | Reportes, Inventario |
+| 9 | `FormField` | Entrada | Todos los formularios |
+| 10 | `QuantityInput` | Entrada | Préstamos, Devoluciones, Inventario |
+| 11 | `UnitSelector` | Entrada | Préstamos, Devoluciones, Inventario |
+| 12 | `TextArea` | Entrada | Formularios de nota y comentario |
+| 13 | `Toolbar` | Estructural | Todas las de listado |
+| 14 | `TabBar` | Estructural | Inventario, Reportes, Configuración |
+| 15 | `DetailPanel` | Estructural | Inventario, Estudiantes, Préstamos, Incidentes |
+| 16 | `KeyValueList` | Presentación | `DetailPanel`, diálogos de ficha |
+| 17 | `EmptyState` | Estado | Todas |
+| 18 | `InlineNotice` | Estado | Todas |
+| 19 | `ConfirmDialog` | Diálogo | Todas |
+| 20 | `FormDialog` | Diálogo | Todos los formularios |
+| 21 | `Toast` | Estado | Todas |
+| 22 | `RowMenu` | Entrada | Todas las tablas |
+| 23 | `CountBadge` | Presentación | Navegación |
+| 24 | `LoadingSkeleton` | Estado | Todas |
+| 25 | `Button` | Entrada | Todas |
 
 ---
 
@@ -331,7 +332,7 @@ el inverso al de importancia:
 | Se oculta | A partir de |
 |-----------|-------------|
 | Columnas de texto secundario (comentario, procedencia) | 1200 px |
-| Columnas de estadoderivadas (procedencia, «prestable») | 1100 px |
+| Columnas de estado derivado (procedencia, «prestable») | 1100 px |
 | Columnas de total | 1024 px |
 | **Nunca** nombre, categoría, disponible ni pendientes | — |
 
@@ -359,7 +360,7 @@ produce.
 | Unidad | Siempre visible en el inventario: «unidades», «artículos» o «prestados», en `secundario` debajo o detrás |
 | Cero | Se muestra `0`, nunca una raya ni un guion. Un cero es información; un guion es ausencia de información |
 | Negativo | Imposible por RN-07. Si algún día apareciera, se muestra en `error` y con signo, para que se note |
-| Fragmento «de 12» | Solo en columnas anchas. Aporta el denominador, que es lo que hace falta para decidir si elstock es suficiente |
+| Fragmento «de 12» | Solo en columnas anchas. Aporta el denominador, que es lo que hace falta para decidir si el stock es suficiente |
 | Color | Ninguno por defecto. Se usa `exito` si es mayor que 0, `advertencia` si es 0, `error` solo si es un faltante confirmado. **El número está siempre al lado** |
 
 | Qt | Notas |
@@ -444,6 +445,32 @@ El contador de la barra lateral.
 
 **Nunca hay una insignia sin nada detrás.** Una insignia que dice `0` enseña a
 Sonia a ignorar las insignias.
+
+---
+
+### 3.7 `UnitCodeBadge`
+
+La celda de código de unidad individual (`articulo_unidad.codigo`). Está en el
+catálogo de `UI_DESIGN.md` sección 7 y es la contraparte de `QuantityCell` para
+los artículos con control individual: donde `QuantityCell` muestra una cifra,
+ésta muestra un identificador.
+
+```
+  OLG-004                código solo, en columna estrecha
+  OLG-004   ● Dañado     con su estado, si la columna lo permite
+```
+
+| Regla | Detalle |
+|-------|---------|
+| Fuente | Monoespaciada y alineada a la izquierda: es un identificador que se lee y se copia (`UI_SCREENS.md` 3.7) |
+| Estado | Si la columna es ancha, muestra la pastilla de estado atenuada a la derecha; si no, el estado vive en la columna «Estado» |
+| Selección | Un clic selecciona la fila, como el resto de la tabla. Ninguna acción extra: la copia es la selección de texto normal |
+| Sin unidad | Si el artículo no tiene control individual no hay celda: la tabla de unidades tiene su propio `EmptyState` |
+| Accesible | Nombre accesible = el código completo, nunca truncado |
+
+| Qt | Notas |
+|----|-------|
+| `QStyledItemDelegate` | Como `QuantityCell` y `StatusChip`: dibuja texto y pastilla; el código va en el modelo para que la exportación lo sirva igual |
 
 ---
 
@@ -630,7 +657,7 @@ componente, cambiando el icono y el texto.
 | Regla | Detalle |
 |-------|---------|
 | Icono | 48 px, monocromo, `texto_secundario` al 40 %. Nunca de colores, nunca una ilustración |
-| Título | `subtitipo`, una frase, en la forma «Todavía no hay X» o «No hay X que coincida con Y» |
+| Título | `subtitulo`, una frase, en la forma «Todavía no hay X» o «No hay X que coincida con Y» |
 | Explicación | `cuerpo`, `texto_secundario`, **una línea que dice qué hacer** |
 | Acción | `Button` primario, solo si hay algo que hacer. Sin acción, el vacío es un callejón sin salida |
 | Alto | Ocupa el espacio disponible, centrado vertical y horizontalmente |

@@ -166,10 +166,12 @@ StockLend/
 ## Estado actual
 
 La **etapa de planificación** está completada como propuesta. El repositorio git
-ya está inicializado y el modelo de datos está escrito y verificado: su SQL se
-ejecutó sobre una base en memoria y los resultados fueron los esperados
-(11 tablas, 2 vistas, 13 índices, y las restricciones de integridad rechazan lo que
-deben).
+está inicializado con su primer commit publicado en GitHub, y el modelo de datos
+está escrito y verificado: su SQL (DDL y consultas de referencia) se ejecutó sobre
+una base en memoria y los resultados fueron los esperados (11 tablas, 2 vistas,
+13 índices, `PRAGMA foreign_key_check` sin violaciones, y las restricciones
+rechazan lo que deben). **No existe todavía ninguna base de datos real ni archivo
+de migración** (`0001_inicial.sql` se escribirá en la Etapa 1).
 
 Las dos decisiones que quedaban abiertas **ya no bloquean nada**, porque el diseño
 admite los dos casos a la vez en lugar de elegir uno:
@@ -186,7 +188,7 @@ El detalle está en la sección 8 de `docs/REQUIREMENTS.md` y en la sección 8 d
 `docs/DEVELOPMENT_PLAN.md`.
 
 **El diseño de interfaz también está escrito**, en los cuatro documentos `UI_*.md`.
-Al revisarlo han salido ocho contradicciones y diez preguntas abiertas, todas
+Al revisarlo han salido diez contradicciones y once preguntas abiertas, todas
 registradas: las contradicciones en la sección 10 de `docs/UI_DESIGN.md` y las
 preguntas en la sección 12 de `docs/UI_FLOWS.md`. **Ninguna se ha resuelto
 modificando requisitos ni reglas de negocio.** Dos de ellas tienen un efecto

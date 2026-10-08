@@ -1,9 +1,25 @@
 # StockLend — Diseño de la Base de Datos
 
-> **Estado del documento:** diseño revisado (revisión 2). **No hay ninguna base de
-> datos creada ni ejecutable.** El SQL de este documento es la especificación de la
-> migración inicial (`stocklend/data/migrations/0001_inicial.sql`), que se escribirá
-> en una etapa posterior. Versión de esquema propuesta: `user_version = 1`.
+> **Estado del documento:** diseño revisado (revisión 3). **No existe ninguna base
+> de datos instalada ni archivo de migración:** el SQL de este documento es la
+> especificación de la migración inicial
+> (`stocklend/data/migrations/0001_inicial.sql`), que se escribirá en la Etapa 1.
+> El DDL de la sección 6 y las consultas de la sección 8 se verificaron
+> ejecutándolos sobre una base **en memoria** (11 tablas, 2 vistas, 13 índices,
+> `user_version = 1`, `PRAGMA foreign_key_check` sin violaciones). Versión de
+> esquema propuesta: `user_version = 1`. El esquema no cambió en la revisión 3:
+> el DDL sigue siendo el de la revisión 2.
+
+### Cambios de la revisión 3
+
+| Cambio | Motivo |
+|--------|--------|
+| Corregidas las consultas 8.2 y 8.3 (alias `total_prestada` → `total_prestado`) | La vista define `total_prestado`; las consultas fallaban con «no such column» |
+| Aclarado el estado de verificación del SQL (encabezado y sección 6) | `README.md` y `DEVELOPMENT_PLAN.md` afirmaban que el DDL se ejecutó en memoria; el documento decía lo contrario |
+| Referencia RN-04 corregida en la sección 4.6 | RN-04 y RN-18 se contradecían sobre artículos repetidos; la pendiente se deriva de RF-DEV-04 y se topa con RN-27 |
+| Fila `ix_incidente_articulo` de la sección 7 completada | Faltaba el nombre de la tabla en la columna de columnas |
+| Aclarada la fila de índices redundantes de la sección 5.2 | «Los tres últimos» era ambiguo |
+| Nueva sección 9.4: garantías de integridad y pruebas previstas | Deja escrito qué valida la base, qué valida el servicio y qué prueba cubre cada regla crítica |
 
 ### Cambios de la revisión 2
 
@@ -362,7 +378,8 @@ Un renglón del préstamo: un artículo y la cantidad entregada.
 `UNIQUE (prestamo_id, articulo_id)`: un artículo no se repite dentro del mismo
 préstamo; el servicio suma las cantidades si se repite (RN-18).
 
-**Cantidad pendiente (RN-04):** es una **obligación**, no un cubo de inventario.
+**Cantidad pendiente (RF-DEV-04, con RN-27 como tope de devolución):** es una
+**obligación**, no un cubo de inventario.
 No se almacena en `articulo` y no tiene columna propia:
 
 ```
@@ -616,7 +633,7 @@ fueron considerados y descartados deliberadamente, no olvidados.
 | Tabla `auditoria` | El movimiento ya da trazabilidad del inventario. Los cambios en datos maestros son raros y RN-15 ya garantiza que no alteran el historial | 2 |
 | Tabla `respaldo` | Solo hace falta cuando exista la pantalla de respaldos, en la etapa 8 | 8 |
 | Vistas `v_inventario`, `v_alertas_prestamos`, `v_alertas_incidentes` | Una consulta en el repositorio es igual de clara que una vista, y evita duplicar el esquema | 7 |
-| Índices `ix_articulo_activo`, `ix_estudiante_codigo`, `ix_prestamo_detalle_prestamo`, `ix_devolucion_detalle_devolucion` | Los tres últimos ya están cubiertos por índices `UNIQUE`; el primero por `ix_articulo_nombre` | — |
+| Índices `ix_estudiante_codigo`, `ix_prestamo_detalle_prestamo`, `ix_devolucion_detalle_devolucion` | Cada uno está cubierto por la restricción `UNIQUE` de la misma combinación de columnas (sección 7); `ix_articulo_activo` por `ix_articulo_nombre` para el caso habitual de consulta | — |
 | `ix_movimiento_referencia` | Navegar desde un movimiento hasta su origen es útil, pero con este volumen el filtrado por fecha o por artículo basta | 7 |
 | FTS5 para búsqueda | A 200–500 artículos un `LIKE` es instantáneo | Solo si supera 2 000 |
 | Generación de PDF | El prompt pide preparar la arquitectura, no implementar la exportación | 7 |
@@ -633,7 +650,13 @@ comportamiento pedido sigue existiendo, solo cambia dónde se implementa.
 
 ## 6. Definición de datos (especificación de la migración inicial)
 
-SQL de referencia. **No se ha ejecutado ni aplicado.**
+SQL de referencia. **Verificado sobre una base en memoria:** el DDL, las vistas,
+los índices y las consultas de la sección 8 se ejecutaron sin errores sobre
+`CREATE ...` completo (11 tablas, 2 vistas, 13 índices, `user_version = 1`,
+`PRAGMA foreign_key_check` sin violaciones, `PRAGMA integrity_check = ok`).
+**No se ha aplicado a ninguna base de datos real:** no existe aún
+`stocklend/data/migrations/0001_inicial.sql` ni ninguna base en
+`%LOCALAPPDATA%\StockLend`.
 
 ```sql
 -- ============================================================================
@@ -898,7 +921,7 @@ PRAGMA user_version = 1;
 | `ix_devolucion_prestamo` | `devolucion(prestamo_id, fecha_devolucion DESC)` | Devoluciones de un préstamo |
 | `ix_devolucion_fecha` | `devolucion(fecha_devolucion)` | Filtro por fecha |
 | `ix_incidente_estado` | `incidente(estado, creado_en DESC)` | Alertas de incidentes abiertos (RF-ALA-02) |
-| `ix_incidente_articulo` | `articulo_id, creado_en DESC` | Historial de incidentes de un artículo |
+| `ix_incidente_articulo` | `incidente(articulo_id, creado_en DESC)` | Historial de incidentes de un artículo |
 
 **Reducción respecto de la revisión 1 (18 → 13).** Se eliminaron cinco:
 
@@ -939,7 +962,7 @@ datos de ejemplo** (RF-DAS-06).
 ### 8.2 Préstamos activos de un estudiante (RF-DEV-01)
 
 ```sql
-SELECT folio, fecha_prestamo, total_prestada, total_pendiente
+SELECT folio, fecha_prestamo, total_prestado, total_pendiente
 FROM v_prestamo_resumen
 WHERE estudiante_id = ?
   AND estado = 'activo'
@@ -953,7 +976,7 @@ ORDER BY fecha_prestamo DESC;
 SELECT
     p.folio, p.fecha_prestamo, p.estado,
     e.codigo_universitario, e.nombres, e.apellidos,
-    v.total_prestada, v.total_pendiente
+    v.total_prestado, v.total_pendiente
 FROM prestamo p
 JOIN estudiante e         ON e.id = p.estudiante_id
 JOIN v_prestamo_resumen v ON v.id = p.id
@@ -1169,6 +1192,52 @@ Los pasos 1 a 6 ocurren dentro de la transacción iniciada con `BEGIN IMMEDIATE`
 el paso 2 y el movimiento discreparan, la reconciliación de la sección 8.6 lo
 detecta. Esa redundancia es deliberada: es la defensa contra un error de
 programación en el único punto del sistema donde los números importan.
+
+### 9.4 Garantías de integridad: qué valida la base y qué valida el servicio
+
+La separación es deliberada. La base impide lo que se puede expresar en una
+restricción de fila; el servicio valida lo que depende de varias filas, de un
+cálculo o de una regla de negocio. Esta sección deja escrito, para las etapas 2
+a 4, dónde va cada validación y con qué prueba se comprueba. **Ninguna regla
+queda sin garantía: o está en la base, o está en el servicio, y siempre hay una
+prueba prevista.**
+
+| Regla | Garantía en la base (v1) | Validación en el servicio | Prueba prevista |
+|-------|--------------------------|---------------------------|-----------------|
+| RN-01, RN-06 | `CHECK (… >= 0)` en los cinco contadores de `articulo` y en las cantidades de `prestamo_detalle` y `devolucion_detalle` | Calcula el nuevo valor desde el cubo de origen y rechaza el movimiento si quedaría negativo (§9.3) | Etapa 3, pruebas con código `RN-01` y `RN-06` |
+| RN-02 | **Sin CHECK de coherencia** (solo los `CHECK` individuales, ver refuerzo abajo); la base acepta una fila con contadores descuadrados si el servicio no valida | Recalcula los cinco contadores dentro de la misma transacción (§9.2, §9.3) | `tests/integration/test_reconciliacion.py`: las consultas §8.6 y §8.7 devuelven cero filas (RN-49) |
+| RN-03, RN-07, RN-08 | `prestable` y `activo` con `CHECK IN (0,1)` | Comprueba `disponible > 0`, `cantidad_total > 0` y `prestable` antes de crear el préstamo | Etapa 4, con mensaje que indica el máximo disponible |
+| RN-05 | `movimiento_inventario.motivo` con `CHECK (length(trim(motivo)) > 0)` y `CHECK (cantidad > 0)` | Inserta el movimiento en la **misma transacción** que modifica el contador: no hay cambio sin movimiento | Etapa 3: alta con `cantidad = 5` genera movimiento `alta` de 5; prueba de rollback |
+| RN-18 | `UNIQUE (prestamo_id, articulo_id)` en `prestamo_detalle` | Si el mismo artículo se repite en la solicitud, acumula las cantidades en una sola línea | Etapa 4, prueba con código `RN-18` |
+| RN-21, RN-48 | — (la base no distingue «todo o nada») | Un método público de servicio = una transacción `BEGIN IMMEDIATE` (§9.1); el fallo del segundo renglón revierte el primero (§9.2) | Etapa 4: pruebas de reversión multi-renglón |
+| RN-27, RN-28 | **No expresable en la base**: depende del total acumulado del renglón, no de un valor de una fila | Compara contra `v_prestamo_detalle.cantidad_pendiente` dentro de la transacción; rechaza con «Quedan n unidades…» | Etapa 4: devolver de más se rechaza. Verificado en la revisión 3: **sin esta validación la base acepta la fila** |
+| RN-33 | `incidente` con `CHECK (length(trim(descripcion)) > 0)` | Exige el incidente antes de descontar un daño o una pérdida | Etapa 4, con código `RN-33` |
+| RN-39 | — | Un artículo pendiente nunca se transforma en faltante; solo un incidente genera el movimiento `perdida_*` | Etapa 4: «Un artículo pendiente no aparece como faltante» |
+| RN-44, RN-45 | `CHECK (cantidad > 0)` en `incidente.cantidad` | Toma como tope el pendiente del renglón (origen `prestamo`/`devolucion`) o el disponible (origen `stock`) | Etapa 4, con código `RN-44` |
+| RN-46 | `ON DELETE RESTRICT` en las 17 claves foráneas (§1.3); ningún repositorio expone `DELETE` (§1.2) | Las bajas son estados (`articulo.activo = 0`, `articulo_unidad.estado = 'baja'`) | Etapa 2: intentar borrar una fila referenciada falla con `FOREIGN KEY constraint failed` |
+| RN-49, RN-61 | — | Contadores y unidades se actualizan en la misma transacción (§9.3) | Reconciliación §8.6 + §8.7 tras cada prueba de inventario, préstamo o devolución |
+| RN-53 | `CHECK (estado <> 'prestada' OR prestamo_detalle_id IS NOT NULL)` en `articulo_unidad` | Asigna la unidad al préstamo y la libera en la misma transacción | Etapa 2 (esquema) y Etapa 4 (flujo) |
+
+**Refuerzos posibles con restricciones SQLite (no aplicados; pendientes de
+aprobación).** SQLite admite `CHECK` que referencian otras columnas de la misma
+fila (verificado en la compilación 3.50.4 que usa Python 3.14). Dos refuerzos
+quedan documentados como candidatos para `0001_inicial.sql`, **sin aplicarlos**:
+
+1. **RN-02 en `articulo`:**
+   `CHECK (cantidad_total = cantidad_disponible + cantidad_prestada + cantidad_daniada + cantidad_faltante)`
+   convertiría el invariante en garantía de esquema. Consecuencia: toda escritura
+   debería pasar por la transacción completa de §9.3; una operación que dejara la
+   fila incoherente aunque fuera momentáneamente sería rechazada por la base.
+2. **`prestamo_detalle.estado` coherente con las cantidades:** un `CHECK` podría
+   prohibir, por ejemplo, `estado = 'devuelto'` con cantidades pendientes. Cubre
+   la mitad de la derivación; la otra mitad (`con_incidente`) depende de la
+   existencia de un incidente, que un `CHECK` de fila no puede ver.
+
+**No se usan disparadores (`TRIGGER`).** No hay ninguno en el esquema y no se
+añaden: mover la lógica a triggers la sacaría del servicio, donde se prueba y se
+registra. La defensa principal de RN-02 sigue siendo la reconciliación de las
+secciones 8.6 y 8.7, que detecta un descuadre contra el libro de movimientos
+aunque la fila en sí parezca coherente.
 
 ---
 

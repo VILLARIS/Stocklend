@@ -182,7 +182,7 @@ contadores de inventario.
 | RN-01 | La cantidad disponible nunca puede ser negativa. Cualquier operación que la vuelva negativa se rechaza y se revierte por completo | RF-INV-03, RF-INV-07 |
 | RN-02 | Para todo artículo se cumple siempre: `total = disponible + prestado + dañado + faltante` | RF-INV-05 |
 | RN-03 | No se puede prestar más de la cantidad disponible de un artículo en una misma operación | RF-INV-07 |
-| RN-04 | Si un préstamo incluye dos filas del mismo artículo, se suman para validar la disponibilidad | RF-PRE-03 |
+| RN-04 | En un préstamo, cada artículo figura en una sola línea con las cantidades acumuladas; la disponibilidad se valida contra esa suma, no línea por línea (ver RN-18) | RF-PRE-03 |
 | RN-05 | Todo cambio de cantidad se registra como movimiento con motivo no vacío, fecha y resultado | RF-INV-06 |
 | RN-06 | Un ajuste negativo solo puede descontar de la cantidad disponible; si no hay disponible suficiente, se rechaza | RF-INV-06 |
 | RN-07 | Un artículo con cantidad total igual a cero no puede prestarse | RN-01 |

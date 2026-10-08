@@ -731,7 +731,7 @@ por cuenta propia.
 
 | # | Pregunta | Qué depende de la respuesta |
 |---|----------|---------------------------|
-| 1 | ¿La devolución con todo en buen estado necesita confirmación, o basta con el botón? | El flujo 4 pasa de 5 a 6 pasos (sección 4.1) |
+| 1 | ¿La devolución con todo en buen estado necesita confirmación, o basta con el botón? | El flujo 4 pasa de 5 a 6 pasos (sección 4.1). Registrada como contradicción **C-9** en `UI_DESIGN.md` sección 10 |
 | 2 | ¿Una unidad que ya venía dañada puede empeorarse a «perdida» en la devolución? | El selector de estado de la unidad pierde una opción (sección 4.2) |
 | 3 | ¿Un incidente de depósito puede atribuirse a un estudiante concreto? | La casilla de responsable se rehabilita para ese caso (sección 8.2) |
 | 4 | ¿Con qué procedimiento se determina la responsabilidad de una pérdida? | La sección 8.1 tiene un hueco, y el formulario necesita recogerlo |
@@ -741,3 +741,4 @@ por cuenta propia.
 | 8 | ¿Hace falta subcategorías de más de dos niveles? | El modelo actual es de dos niveles, y `DATABASE_DESIGN.md` lo documenta |
 | 9 | ¿Hace falta exportar la ficha de estudiante, o basta con el historial de préstamos? | No está entre los requisitos, y este diseño no lo añade |
 | 10 | ¿Hay un segundo usuario previsto? | La interfaz es de un solo usuario. Un segundo usuario cambia el modelo de datos, no solo las pantallas |
+| 11 | ¿El registro de un incidente necesita una confirmación final además del aviso en línea? | La sección 8.1 usa un `InlineNotice` en vez de `ConfirmDialog`. Registrada como contradicción **C-10** en `UI_DESIGN.md` sección 10 |
