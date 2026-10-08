@@ -1,0 +1,192 @@
+# ============================================================================
+# StockLend — .gitignore
+# ============================================================================
+# Regla principal: NUNCA se versionan datos reales, copias de seguridad,
+# datos personales, registros de actividad ni artefactos de compilación.
+# El repositorio contiene código y documentación, nada más.
+# ============================================================================
+
+
+# --- Datos de la aplicación (CRÍTICO) --------------------------------------
+# La base de datos nunca se versiona: contiene datos personales de estudiantes.
+*.sqlite
+*.sqlite3
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Copias de seguridad y exportaciones
+*.bak
+*.backup
+*-copia.sqlite
+*-copia.sqlite3
+# Anclados a la raiz, por el mismo motivo que /data/ mas abajo: un patron de
+# directorio sin "/" inicial coincide en cualquier nivel.
+/respaldos/
+/backups/
+/export/
+/exportes/
+*.csv
+*.xlsx
+*.xls
+*.ods
+*.pdf
+
+# Datos de desarrollo en la RAIZ del repositorio.
+# La barra inicial es imprescindible: sin ella, "data/" tambien coincidiria con
+# stocklend/data/, que es CODIGO FUENTE (la capa de acceso a datos) y nunca
+# debe quedar fuera del repositorio.
+/data/
+/logs/
+/registros/
+
+# La base de datos de la aplicacion instalada vive en %LOCALAPPDATA%,
+# fuera del repositorio. Esta linea protege tambien de un cambio de
+# configuracion accidental de STOCKLEND_DATA_DIR.
+stocklend.sqlite*
+
+
+# --- Datos personales y secretos -------------------------------------------
+# Blindaje extra: si alguien exporta o pega un volcado por error, no se versiona.
+dump.sql
+dump.sqlite
+*.env
+*.env.*
+.env
+.envrc
+secrets/
+secretos/
+*.pem
+*.key
+*.pfx
+*.p12
+credentials.json
+credenciales.json
+
+# Datos de ejemplo generados a mano con nombres reales: no deben entrar al repo.
+*_datos_reales.*
+*_datos_personales.*
+
+
+# --- Python ----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Distribuciones yegg
+*.egg
+*.egg-info/
+dist/
+build/
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+sdist/
+wheels/
+share/python-wheels/
+*.egg-info/
+MANIFEST
+
+# PyInstaller (usamos build/ y dist/, ya cubiertos arriba, mas especificos)
+*.manifest
+*.spec.bak
+stocklend.spec.orig
+__pycache__/stocklend.*
+
+# pytest
+.pytest_cache/
+tests/.pytest_cache/
+.cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+coverage-html/
+.tox/
+.nox/
+.cache
+nosetests.xml
+
+# Coverage / profiling
+*.cover
+profile.dat
+.prof
+
+# mypy / type checkers
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+.ruff_cache/
+
+# Editores
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.code-workspace
+
+
+# --- Sistema operativo ------------------------------------------------------
+# Windows
+Thumbs.db
+ehthumbs.db
+Thumbs.db:encryptable
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+*.stackdump
+hiberfil.sys
+pagefile.sys
+swapfile.sys
+*.cab
+*.msi
+*.msix
+*.appx
+*.appxbundle
+
+# macOS (por si se prueba en otro sistema)
+.DS_Store
+.DS_Store?
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+# El archivo de recurso de macOS se llama "Icon" + retorno de carro. No se
+# incluye a proposito: gitignore no interpreta escapes, y la unica formula
+# aproximada ("Icon?") tambien coincidiria con el directorio
+# stocklend/resources/icons/, dejando los iconos de la aplicacion sin poder
+# versionarse nunca. Es preferible ese archivo sin versionar que esa carpeta.
+
+# Linux
+*~
+*.kate-swp
+.*.sw[po]
+.*.kdev_private/
+
+
+# --- Otros ------------------------------------------------------------------
+# Certificados y material de firma de PyInstaller.
+# *.pem y *.p12 ya estan cubiertos mas arriba, en "Datos personales y secretos".
+certificados/
+certificates/
+
+# Documentos generados que no son fuente del proyecto
+*.log
