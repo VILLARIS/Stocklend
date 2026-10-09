@@ -1077,6 +1077,14 @@ ORDER BY apellidos, nombres
 LIMIT 50;
 ```
 
+**Nota (Etapa 3).** Para cumplir RN-13 sin agregar columnas, la implementación usa la
+función SQL determinista `sin_acentos`, registrada en cada conexión desde
+`data/database.py`: pliega el texto (sin acentos, en minúsculas) y la búsqueda aplica
+`sin_acentos(columna) LIKE ?` con el término ya plegado y recortado. La base no cambia
+de esquema; el único costo es que el predicado deja de usar el índice
+`ix_estudiante_apellidos`, aceptable con el volumen esperado (decenas o miles de
+estudiantes).
+
 ### 8.6 Reconciliación contadores contra el libro de movimientos (RN-49)
 
 Si devuelve filas, hay un error en el servicio y hay que corregirlo antes de seguir.

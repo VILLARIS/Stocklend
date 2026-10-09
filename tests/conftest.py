@@ -145,6 +145,22 @@ def repos(conn_migrada):
 
 
 @pytest.fixture
+def servicios(conn_migrada):
+    """Los tres servicios de la Etapa 3 sobre una base migrada."""
+    from stocklend.services import (
+        EstudianteService,
+        InventarioService,
+        UnidadService,
+    )
+
+    return SimpleNamespace(
+        inventario=InventarioService(conn_migrada),
+        unidades=UnidadService(conn_migrada),
+        estudiantes=EstudianteService(conn_migrada),
+    )
+
+
+@pytest.fixture
 def fabrica():
     """Fábricas de entidades de dominio con valores por defecto razonables."""
 

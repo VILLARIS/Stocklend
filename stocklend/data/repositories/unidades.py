@@ -123,14 +123,15 @@ class ArticuloUnidadRepo:
         return int(self._conn.execute(sql, parametros).fetchone()[0])
 
     def actualizar(self, unidad: ArticuloUnidad) -> None:
-        """Actualiza estado, préstamo asociado y metadatos de una unidad (RN-53)."""
+        """Actualiza código, estado, préstamo asociado y metadatos (RN-51, RN-53)."""
         if unidad.id is None:
             raise ValueError("No se puede actualizar una unidad sin id")
         cursor = self._conn.execute(
-            "UPDATE articulo_unidad SET descripcion = ?, estado = ?,"
+            "UPDATE articulo_unidad SET codigo = ?, descripcion = ?, estado = ?,"
             " prestamo_detalle_id = ?, verificado_en = ?, notas = ?,"
             " actualizado_en = ? WHERE id = ?",
             (
+                unidad.codigo,
                 unidad.descripcion,
                 unidad.estado.value,
                 unidad.prestamo_detalle_id,

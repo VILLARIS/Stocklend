@@ -175,6 +175,19 @@ esquema.
 El control individual está modelado como opción por artículo (D-02); si al final
 resulta que ningún equipo lo necesita, la tabla simplemente queda vacía.
 
+**Estado:** implementada. `stocklend/services/` contiene `_comun.py` (cálculo puro
+de contadores, validación de motivo y registro del movimiento en el orden de
+`DATABASE_DESIGN` §9.3), `inventario_service.py`, `unidad_service.py` y
+`estudiante_service.py`. Cada método público abre una sola transacción
+`BEGIN IMMEDIATE`. Para RN-13 se registra la función SQL determinista
+`sin_acentos` en `data/database.py`, de modo que la búsqueda de estudiantes ignora
+acentos y mayúsculas sin cambiar el esquema. Las transiciones de unidad de esta
+etapa cubren los estados de stock (`disponible`, `danada`, `faltante`, `baja`); las
+que pasan por `prestada` corresponden a la Etapa 4. Las doce verificaciones de la
+etapa se comprueban en pruebas unitarias y de integración, incluida la
+reconciliación de contadores (§8.6) y de unidades (§8.7). La suite pasa completa y
+`ruff` no reporta hallazgos.
+
 ---
 
 ### Etapa 4 — Préstamos, devoluciones e incidentes

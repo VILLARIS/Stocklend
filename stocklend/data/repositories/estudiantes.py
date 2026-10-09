@@ -7,6 +7,7 @@ from dataclasses import replace
 
 from ...domain.entidades import Estudiante
 from ...domain.excepciones import NoEncontradoError
+from ..database import sin_acentos
 from ._comun import LIMITE_POR_DEFECTO, validar_pagina
 
 _COLUMNAS = (
@@ -84,12 +85,13 @@ class EstudianteRepo:
         limite: int = LIMITE_POR_DEFECTO,
         desplazamiento: int = 0,
     ) -> list[Estudiante]:
-        """Búsqueda por código, nombres o apellidos (DATABASE_DESIGN §8.5)."""
+        """Búsqueda por código, nombres o apellidos, sin acentos ni mayúsculas (RN-13)."""
         limite, desplazamiento = validar_pagina(limite, desplazamiento)
-        patron = f"%{termino}%"
+        patron = f"%{sin_acentos(termino.strip())}%"
         sql = (
             f"SELECT {_COLUMNAS} FROM estudiante"
-            " WHERE (codigo_universitario LIKE ? OR nombres LIKE ? OR apellidos LIKE ?)"
+            " WHERE (sin_acentos(codigo_universitario) LIKE ?"
+            " OR sin_acentos(nombres) LIKE ? OR sin_acentos(apellidos) LIKE ?)"
         )
         parametros: list[object] = [patron, patron, patron]
         if solo_activos:

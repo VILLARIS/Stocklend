@@ -9,9 +9,10 @@ archivos de Excel que se utilizan actualmente, y para que el historial de cada
 artículo y de cada estudiante quede guardado de forma confiable.
 
 > **Estado del proyecto: en desarrollo.**
-> Existen la base de datos con sus migraciones (Etapa 1) y el dominio con sus
-> repositorios (Etapa 2), con pruebas automatizadas en verde. **Todavía no hay
-> servicios de negocio, pantallas ni ejecutable.**
+> Existen la base de datos con sus migraciones (Etapa 1), el dominio con sus
+> repositorios (Etapa 2) y los servicios de inventario, unidades y estudiantes
+> (Etapa 3), con pruebas automatizadas en verde. **Todavía no hay préstamos,
+> devoluciones, pantallas ni ejecutable.**
 >
 > El diseño de interfaz está escrito como propuesta en los cuatro documentos
 > `UI_*.md`. Eso es una especificación, no una maqueta: no hay todavía ningún widget
@@ -154,7 +155,7 @@ StockLend/
 | 0 | Documentación técnica y diseño de interfaz *(completada)* |
 | 1 | Cimientos: estructura, rutas y base de datos creada y migrada *(completada)* |
 | 2 | Dominio y acceso a datos *(implementada)* |
-| 3 | Servicios de inventario y estudiantes |
+| 3 | Servicios de inventario y estudiantes *(implementada)* |
 | 4 | Servicios de préstamos, devoluciones e incidentes |
 | 5 | Armazón de la interfaz: navegación y tema |
 | 6 | Pantallas de operación |
@@ -170,8 +171,13 @@ rutas, configuración, registro y base de datos con su migración inicial
 (`0001_inicial.sql`, 11 tablas, 2 vistas, 13 índices). La **Etapa 2** está
 implementada: `stocklend/domain/` (entidades, enums, value objects y excepciones) y
 `stocklend/data/repositories/` (un repositorio por entidad, con SQL parametrizado,
-paginación e historial). La suite `pytest` cubre las dos etapas y `ruff` no reporta
-hallazgos. **Todavía no hay servicios de negocio, pantallas ni ejecutable.**
+paginación e historial). La **Etapa 3** está implementada:
+`stocklend/services/` con `InventarioService` (categorías, artículos, ajustes con
+motivo e historial de movimientos), `UnidadService` (unidades con control
+individual) y `EstudianteService` (alta, edición, búsqueda e historial). Cada
+método público abre una sola transacción y los contadores se reconcilian con el
+libro de movimientos. La suite `pytest` cubre las tres etapas y `ruff` no reporta
+hallazgos. **Todavía no hay préstamos, devoluciones, pantallas ni ejecutable.**
 
 Las dos decisiones que quedaban abiertas **ya no bloquean nada**, porque el diseño
 admite los dos casos a la vez en lugar de elegir uno:

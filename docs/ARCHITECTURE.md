@@ -202,6 +202,17 @@ persistente, instanciado una vez en el contenedor de la aplicación.
 - No se ejecutan `SELECT` de KPI en la vista: el panel se calcula en
   `DashboardService` para que las cifras sean siempre consistentes y testeables.
 
+**Estado (Etapa 3).** Están implementados `InventarioService`, `UnidadService` y
+`EstudianteService`, junto con el módulo privado `_comun.py` que concentra el
+cálculo puro de contadores (RN-01, RN-02, RN-58, RN-59) y el registro del
+movimiento en el orden de `DATABASE_DESIGN` §9.3. Cada método público construye sus
+repositorios sobre la conexión recibida y abre una sola transacción
+`BEGIN IMMEDIATE` (`data.database.transaction`); los servicios no se llaman entre
+sí dentro de una transacción, comparten lógica por `_comun`. `PrestamoService`,
+`DevolucionService` e `IncidenteService` quedan para la Etapa 4 y
+`DashboardService`, `ReporteService`, `RespaldoService` y `ConfiguracionService`
+para las etapas 6 a 8.
+
 ### 3.4 `stocklend/ui/` — Presentación
 
 | Módulo | Responsabilidad |

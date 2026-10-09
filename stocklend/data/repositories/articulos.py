@@ -84,6 +84,16 @@ class ArticuloRepo:
         ).fetchone()
         return _a_entidad(fila) if fila is not None else None
 
+    def obtener_por_nombre_y_categoria(
+        self, categoria_id: int, nombre: str
+    ) -> Articulo | None:
+        """Busca por la clave lógica ``(categoria_id, nombre)`` (RN-09)."""
+        fila = self._conn.execute(
+            f"SELECT {_COLUMNAS} FROM articulo WHERE categoria_id = ? AND nombre = ?",
+            (categoria_id, nombre),
+        ).fetchone()
+        return _a_entidad(fila) if fila is not None else None
+
     def listar(
         self,
         *,
