@@ -10,9 +10,9 @@ artículo y de cada estudiante quede guardado de forma confiable.
 
 > **Estado del proyecto: en desarrollo.**
 > Existen la base de datos con sus migraciones (Etapa 1), el dominio con sus
-> repositorios (Etapa 2) y los servicios de inventario, unidades y estudiantes
-> (Etapa 3), con pruebas automatizadas en verde. **Todavía no hay préstamos,
-> devoluciones, pantallas ni ejecutable.**
+> repositorios (Etapa 2), los servicios de inventario, unidades y estudiantes
+> (Etapa 3) y los servicios de préstamos, devoluciones e incidentes (Etapa 4), con
+> pruebas automatizadas en verde. **Todavía no hay pantallas ni ejecutable.**
 >
 > El diseño de interfaz está escrito como propuesta en los cuatro documentos
 > `UI_*.md`. Eso es una especificación, no una maqueta: no hay todavía ningún widget
@@ -156,7 +156,7 @@ StockLend/
 | 1 | Cimientos: estructura, rutas y base de datos creada y migrada *(completada)* |
 | 2 | Dominio y acceso a datos *(implementada)* |
 | 3 | Servicios de inventario y estudiantes *(implementada)* |
-| 4 | Servicios de préstamos, devoluciones e incidentes |
+| 4 | Servicios de préstamos, devoluciones e incidentes *(implementada)* |
 | 5 | Armazón de la interfaz: navegación y tema |
 | 6 | Pantallas de operación |
 | 7 | Panel, reportes y exportaciones |
@@ -174,10 +174,13 @@ implementada: `stocklend/domain/` (entidades, enums, value objects y excepciones
 paginación e historial). La **Etapa 3** está implementada:
 `stocklend/services/` con `InventarioService` (categorías, artículos, ajustes con
 motivo e historial de movimientos), `UnidadService` (unidades con control
-individual) y `EstudianteService` (alta, edición, búsqueda e historial). Cada
-método público abre una sola transacción y los contadores se reconcilian con el
-libro de movimientos. La suite `pytest` cubre las tres etapas y `ruff` no reporta
-hallazgos. **Todavía no hay préstamos, devoluciones, pantallas ni ejecutable.**
+individual) y `EstudianteService` (alta, edición, búsqueda e historial). La
+**Etapa 4** está implementada: `PrestamoService` (alta multi-artículo con folio y
+anulación), `DevolucionService` (devoluciones totales y parciales con cierre
+automático) e `IncidenteService` (daños y pérdidas de `stock`, `prestamo` y
+`devolucion`). Cada método público abre una sola transacción y los contadores se
+reconcilian con el libro de movimientos. La suite `pytest` cubre las cuatro etapas
+y `ruff` no reporta hallazgos. **Todavía no hay pantallas ni ejecutable.**
 
 Las dos decisiones que quedaban abiertas **ya no bloquean nada**, porque el diseño
 admite los dos casos a la vez en lugar de elegir uno:

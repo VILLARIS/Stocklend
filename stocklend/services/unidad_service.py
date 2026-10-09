@@ -20,8 +20,7 @@ from ..domain.value_objects import CodigoUnidad
 from ._comun import (
     SIN_CAMBIO,
     ahora,
-    calcular_contadores,
-    construir_movimiento,
+    aplicar_movimiento_unidad,
     registrar_movimiento,
     validar_motivo,
 )
@@ -236,7 +235,7 @@ class UnidadService:
                 articulo_id=articulo.id,
                 codigo=codigo,
                 descripcion=descripcion,
-                estado=estado,
+                estado=EstadoUnidad.DISPONIBLE,
                 prestamo_detalle_id=None,
                 verificado_en=None,
                 notas=notas,
@@ -257,17 +256,16 @@ class UnidadService:
         if estado == EstadoUnidad.DISPONIBLE:
             return unidad, nuevo
         tipo = _TRANSICIONES[(EstadoUnidad.DISPONIBLE, estado)]
-        nuevo = calcular_contadores(nuevo, tipo, 1)
-        self._articulos.actualizar_contadores(nuevo)
-        self._movimientos.crear(
-            construir_movimiento(
-                nuevo,
-                tipo,
-                1,
-                "Estado inicial de la unidad",
-                fecha=fecha,
-                unidad_id=unidad.id,
-            )
+        nuevo, unidad = aplicar_movimiento_unidad(
+            self._articulos,
+            self._unidades,
+            self._movimientos,
+            nuevo,
+            unidad,
+            tipo,
+            nuevo_estado=estado,
+            motivo="Estado inicial de la unidad",
+            fecha=fecha,
         )
         return unidad, nuevo
 
@@ -280,16 +278,17 @@ class UnidadService:
         motivo: str,
         fecha: str,
     ) -> tuple[Articulo, ArticuloUnidad]:
-        nuevo = calcular_contadores(articulo, tipo, 1)
-        self._articulos.actualizar_contadores(nuevo)
-        unidad_nueva = replace(unidad, estado=estado_destino, actualizado_en=fecha)
-        self._unidades.actualizar(unidad_nueva)
-        self._movimientos.crear(
-            construir_movimiento(
-                nuevo, tipo, 1, motivo, fecha=fecha, unidad_id=unidad.id
-            )
+        return aplicar_movimiento_unidad(
+            self._articulos,
+            self._unidades,
+            self._movimientos,
+            articulo,
+            unidad,
+            tipo,
+            nuevo_estado=estado_destino,
+            motivo=motivo,
+            fecha=fecha,
         )
-        return nuevo, unidad_nueva
 
     def _obtener_articulo(self, articulo_id: int) -> Articulo:
         articulo = self._articulos.obtener_por_id(articulo_id)

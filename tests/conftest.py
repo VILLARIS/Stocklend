@@ -146,10 +146,13 @@ def repos(conn_migrada):
 
 @pytest.fixture
 def servicios(conn_migrada):
-    """Los tres servicios de la Etapa 3 sobre una base migrada."""
+    """Los servicios de las etapas 3 y 4 sobre una base migrada."""
     from stocklend.services import (
+        DevolucionService,
         EstudianteService,
+        IncidenteService,
         InventarioService,
+        PrestamoService,
         UnidadService,
     )
 
@@ -157,6 +160,9 @@ def servicios(conn_migrada):
         inventario=InventarioService(conn_migrada),
         unidades=UnidadService(conn_migrada),
         estudiantes=EstudianteService(conn_migrada),
+        prestamos=PrestamoService(conn_migrada),
+        devoluciones=DevolucionService(conn_migrada),
+        incidentes=IncidenteService(conn_migrada),
     )
 
 

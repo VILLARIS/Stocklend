@@ -11,9 +11,26 @@ from __future__ import annotations
 from dataclasses import replace
 from datetime import datetime
 
-from ..data.repositories import ArticuloRepo, MovimientoRepo
-from ..domain.entidades import Articulo, MovimientoInventario
-from ..domain.enums import Cubo, TipoMovimiento
+from ..data.repositories import (
+    ArticuloRepo,
+    ArticuloUnidadRepo,
+    MovimientoRepo,
+    PrestamoRepo,
+)
+from ..domain.entidades import (
+    Articulo,
+    ArticuloUnidad,
+    MovimientoInventario,
+    Prestamo,
+    PrestamoDetalle,
+)
+from ..domain.enums import (
+    Cubo,
+    EstadoDetalle,
+    EstadoPrestamo,
+    EstadoUnidad,
+    TipoMovimiento,
+)
 from ..domain.excepciones import (
     CantidadInsuficienteError,
     ReglaNegocioError,
@@ -173,3 +190,97 @@ def registrar_movimiento(
         )
     )
     return nuevo
+
+
+def aplicar_movimiento_unidad(
+    articulos: ArticuloRepo,
+    unidades: ArticuloUnidadRepo,
+    movimientos: MovimientoRepo,
+    articulo: Articulo,
+    unidad: ArticuloUnidad,
+    tipo: TipoMovimiento,
+    *,
+    nuevo_estado: EstadoUnidad,
+    motivo: str,
+    fecha: str,
+    prestamo_detalle_id: int | None | object = SIN_CAMBIO,
+    referencia_tipo: str | None = None,
+    referencia_id: int | None = None,
+) -> tuple[Articulo, ArticuloUnidad]:
+    """Mueve **una** unidad y ajusta contadores y libro en el mismo paso (RN-53).
+
+    El cubo de origen y destino del contador los declara ``tipo`` (RN-58, RN-59).
+    ``prestamo_detalle_id`` usa ``SIN_CAMBIO`` para conservar el vínculo actual
+    (transiciones de stock) o se fija explícitamente al prestar y al liberar
+    (RN-52, RN-53).
+    """
+    nuevo = calcular_contadores(articulo, tipo, 1)
+    articulos.actualizar_contadores(nuevo)
+    detalle = (
+        unidad.prestamo_detalle_id
+        if prestamo_detalle_id is SIN_CAMBIO
+        else prestamo_detalle_id
+    )
+    unidad_nueva = replace(
+        unidad,
+        estado=nuevo_estado,
+        prestamo_detalle_id=detalle,
+        actualizado_en=fecha,
+    )
+    unidades.actualizar(unidad_nueva)
+    movimientos.crear(
+        construir_movimiento(
+            nuevo,
+            tipo,
+            1,
+            motivo,
+            fecha=fecha,
+            unidad_id=unidad.id,
+            referencia_tipo=referencia_tipo,
+            referencia_id=referencia_id,
+        )
+    )
+    return nuevo, unidad_nueva
+
+
+def estado_detalle(detalle: PrestamoDetalle) -> EstadoDetalle:
+    """Deriva el estado de un renglón de sus cantidades (REQUIREMENTS §5.2, RN-35).
+
+    Debe coincidir con el ``CHECK`` de coherencia del esquema: ``pendiente`` sin
+    movimiento, ``parcial`` con devolución y pendiente, ``devuelto`` con pendiente
+    cero y sin daños, y ``con_incidente`` en cuanto hay daño o pérdida.
+    """
+    if detalle.cantidad_daniada > 0 or detalle.cantidad_perdida > 0:
+        return EstadoDetalle.CON_INCIDENTE
+    pendiente = (
+        detalle.cantidad_prestada
+        - detalle.cantidad_devuelta
+        - detalle.cantidad_daniada
+        - detalle.cantidad_perdida
+    )
+    if pendiente == 0:
+        return EstadoDetalle.DEVUELTO
+    if detalle.cantidad_devuelta > 0:
+        return EstadoDetalle.PARCIAL
+    return EstadoDetalle.PENDIENTE
+
+
+def cerrar_prestamo_si_corresponde(
+    prestamos: PrestamoRepo, prestamo: Prestamo, fecha: str
+) -> Prestamo:
+    """Cierra el préstamo cuando no queda ningún renglón pendiente (RN-35).
+
+    Un préstamo con devoluciones parciales sigue ``activo`` (RN-36); solo un
+    préstamo sin pendiente pasa a ``cerrado``. No hace nada si ya está cerrado o
+    anulado.
+    """
+    if prestamo.id is None:
+        raise ValueError("No se puede cerrar un préstamo sin id")
+    if prestamo.estado is not EstadoPrestamo.ACTIVO:
+        return prestamo
+    detalles = prestamos.listar_detalles_con_pendiente(prestamo.id)
+    if any((detalle.cantidad_pendiente or 0) > 0 for detalle in detalles):
+        return prestamo
+    cerrado = replace(prestamo, estado=EstadoPrestamo.CERRADO, cerrado_en=fecha)
+    prestamos.actualizar_estado(cerrado)
+    return cerrado

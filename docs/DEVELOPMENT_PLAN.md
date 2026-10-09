@@ -221,6 +221,21 @@ reconciliación de contadores (§8.6) y de unidades (§8.7). La suite pasa compl
   el primero tampoco queda registrado.
 - La reconciliación de contadores sigue dando cero filas al terminar cada prueba.
 
+**Estado:** implementada. `stocklend/services/` añade `prestamo_service.py`,
+`devolucion_service.py` e `incidente_service.py`, y `_comun.py` gana
+`aplicar_movimiento_unidad`, `estado_detalle` y `cerrar_prestamo_si_corresponde`
+para compartir el control individual (RN-50 a RN-53) y el cierre por renglón
+(RN-35, RN-36). Cada método público abre una sola transacción `BEGIN IMMEDIATE`; si
+una línea falla, ninguna queda registrada (RN-21, RN-48). Los préstamos generan su
+folio `PRE-<año>-<6 dígitos>` con la clave `folio_prestamo_<año>` de `configuracion`
+(RN-20); las devoluciones crean el incidente `devolucion` en la misma transacción
+(RN-33, RN-54); la anulación libera el stock y las unidades con la referencia
+`anulacion`. `IncidenteRepo.actualizar` persiste también la descripción para poder
+registrar la responsabilidad (RN-56). Las 20 verificaciones de la etapa se
+comprueban en pruebas unitarias y de integración, incluida la reconciliación de
+contadores (§8.6) y de unidades (§8.7) y la persistencia tras reabrir la conexión.
+La suite pasa completa (296 pruebas) y `ruff` no reporta hallazgos.
+
 ---
 
 ### Etapa 5 — Armazón de la interfaz

@@ -183,11 +183,12 @@ class IncidenteRepo:
             raise ValueError("No se puede actualizar un incidente sin id")
         cursor = self._conn.execute(
             "UPDATE incidente SET estado = ?, responsabilidad = ?, estudiante_id = ?,"
-            " resolucion = ?, resuelto_en = ? WHERE id = ?",
+            " descripcion = ?, resolucion = ?, resuelto_en = ? WHERE id = ?",
             (
                 incidente.estado.value,
                 incidente.responsabilidad.value,
                 incidente.estudiante_id,
+                incidente.descripcion,
                 incidente.resolucion,
                 incidente.resuelto_en,
                 incidente.id,
