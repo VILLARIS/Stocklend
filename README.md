@@ -8,14 +8,14 @@ StockLend está pensado para sustituir los registros en cuadernos, fichas físic
 archivos de Excel que se utilizan actualmente, y para que el historial de cada
 artículo y de cada estudiante quede guardado de forma confiable.
 
-> **Estado del proyecto: en fase de planificación.**
-> Solo existe documentación técnica. **No hay pantallas, ni base de datos
-> funcional, ni módulos implementados, ni pruebas ejecutadas, ni ejecutable
-> generado.** No se ha instalado ninguna dependencia.
+> **Estado del proyecto: en desarrollo.**
+> Existen la base de datos con sus migraciones (Etapa 1) y el dominio con sus
+> repositorios (Etapa 2), con pruebas automatizadas en verde. **Todavía no hay
+> servicios de negocio, pantallas ni ejecutable.**
 >
 > El diseño de interfaz está escrito como propuesta en los cuatro documentos
-> `UI_*.md`. Eso es una especificación, no una maqueta: no hay ni un solo widget de
-> PySide6, ni una hoja de estilos, ni un icono en el repositorio.
+> `UI_*.md`. Eso es una especificación, no una maqueta: no hay todavía ningún widget
+> de PySide6, ni una hoja de estilos, ni un icono en el repositorio.
 
 ---
 
@@ -151,9 +151,9 @@ StockLend/
 
 | Etapa | Resultado |
 |-------|-----------|
-| 0 | Documentación técnica y diseño de interfaz *(en curso de revisión)* |
-| 1 | Cimientos: estructura, rutas y base de datos creada y migrada |
-| 2 | Dominio y acceso a datos |
+| 0 | Documentación técnica y diseño de interfaz *(completada)* |
+| 1 | Cimientos: estructura, rutas y base de datos creada y migrada *(completada)* |
+| 2 | Dominio y acceso a datos *(implementada)* |
 | 3 | Servicios de inventario y estudiantes |
 | 4 | Servicios de préstamos, devoluciones e incidentes |
 | 5 | Armazón de la interfaz: navegación y tema |
@@ -165,13 +165,13 @@ StockLend/
 
 ## Estado actual
 
-La **etapa de planificación** está completada como propuesta. El repositorio git
-está inicializado con su primer commit publicado en GitHub, y el modelo de datos
-está escrito y verificado: su SQL (DDL y consultas de referencia) se ejecutó sobre
-una base en memoria y los resultados fueron los esperados (11 tablas, 2 vistas,
-13 índices, `PRAGMA foreign_key_check` sin violaciones, y las restricciones
-rechazan lo que deben). **No existe todavía ninguna base de datos real ni archivo
-de migración** (`0001_inicial.sql` se escribirá en la Etapa 1).
+La **Etapa 1** está completada y commiteada: estructura del proyecto, entorno,
+rutas, configuración, registro y base de datos con su migración inicial
+(`0001_inicial.sql`, 11 tablas, 2 vistas, 13 índices). La **Etapa 2** está
+implementada: `stocklend/domain/` (entidades, enums, value objects y excepciones) y
+`stocklend/data/repositories/` (un repositorio por entidad, con SQL parametrizado,
+paginación e historial). La suite `pytest` cubre las dos etapas y `ruff` no reporta
+hallazgos. **Todavía no hay servicios de negocio, pantallas ni ejecutable.**
 
 Las dos decisiones que quedaban abiertas **ya no bloquean nada**, porque el diseño
 admite los dos casos a la vez en lugar de elegir uno:

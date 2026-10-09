@@ -139,6 +139,11 @@ Reglas de este paquete:
 - Sin `datetime.now()` dentro de las entidades: el tiempo lo inyecta el servicio.
 - Sin SQL, sin PySide6, sin acceso a archivos.
 
+**Estado (Etapa 2):** implementado. Además de los tipos de la tabla, el dominio
+incluye dos tipos de apoyo que el modelo implica y no estaban listados: `Cubo` (los
+cinco contadores de `articulo`) y `Configuracion` (la fila clave/valor que usa
+`ConfiguracionRepo`). Se verifica con `tests/unit/test_domain_*`.
+
 ### 3.2 `stocklend/data/` — Acceso a datos
 
 | Módulo | Responsabilidad |
@@ -146,6 +151,11 @@ Reglas de este paquete:
 | `database.py` | Fábrica de conexiones `sqlite3`, PRAGMA, `Database.transaction()` |
 | `migrations/` | Scripts SQL numerados, aplicados en orden, versionados con `PRAGMA user_version` |
 | `repositories/` | Un repositorio por agregado: `ArticuloRepo`, `ArticuloUnidadRepo`, `EstudianteRepo`, `PrestamoRepo`, `DevolucionRepo`, `IncidenteRepo`, `MovimientoRepo`, `DashboardRepo`, `RespaldoRepo`, `ConfiguracionRepo` |
+
+**Estado (Etapa 2):** implementados los repositorios de entidades. Se añade
+`CategoriaRepo`, que la lista anterior no incluía: la categoría es un agregado con
+CRUD propio y la verificación de la etapa lo exige. `DashboardRepo` y `RespaldoRepo`
+quedan diferidos a sus etapas (panel y respaldo).
 
 **Contrato de los repositorios:**
 - Todo SQL va en el repositorio, con parámetros vinculados (`?`). Nunca `f"SELECT ... {var}"`.

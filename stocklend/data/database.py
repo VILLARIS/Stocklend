@@ -21,7 +21,9 @@ def connect(db_path: str | Path = ":memory:") -> sqlite3.Connection:
     conn = sqlite3.connect(ruta, timeout=BUSY_TIMEOUT_MS / 1000, isolation_level=None)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
+    conn.execute("PRAGMA synchronous = NORMAL")
     conn.execute(f"PRAGMA busy_timeout = {BUSY_TIMEOUT_MS}")
+    conn.execute("PRAGMA temp_store = MEMORY")
     if ruta != ":memory:":
         modo = conn.execute("PRAGMA journal_mode = WAL").fetchone()[0]
         if str(modo).lower() != "wal":

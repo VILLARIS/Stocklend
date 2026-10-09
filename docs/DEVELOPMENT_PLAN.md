@@ -129,6 +129,17 @@ maquetada**.
 - Un listado de 10 000 registros devuelve una página, no todo.
 - Los servicios (aún no escritos) pueden construirse con un repositorio falso.
 
+**Estado:** implementada, pendiente de aprobación. `stocklend/domain/` contiene las
+entidades, los enums, los value objects y las excepciones; `stocklend/data/repositories/`
+contiene un repositorio por entidad (más `CategoriaRepo`, que la verificación exige)
+con SQL parametrizado, paginación e historial. Las seis verificaciones de la etapa se
+comprueban en pruebas de integración; `DashboardRepo` y `RespaldoRepo` quedan
+diferidos a la etapa 7 y la 8. La suite `pytest` pasa completa y `ruff` no reporta
+hallazgos.
+
+**Lo que NO se hace en esta etapa:** servicios de negocio, pantallas, cambios de
+esquema.
+
 ---
 
 ### Etapa 3 — Inventario y estudiantes
