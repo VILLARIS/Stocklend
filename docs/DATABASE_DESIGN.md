@@ -1,14 +1,26 @@
 # StockLend — Diseño de la Base de Datos
 
-> **Estado del documento:** diseño revisado (revisión 3). **No existe ninguna base
+> **Estado del documento:** diseño revisado (revisión 4). **No existe ninguna base
 > de datos instalada ni archivo de migración:** el SQL de este documento es la
 > especificación de la migración inicial
-> (`stocklend/data/migrations/0001_inicial.sql`), que se escribirá en la Etapa 1.
+> (`stocklend/data/migrations/0001_inicial.sql`), que se escribe en la Etapa 1.
 > El DDL de la sección 6 y las consultas de la sección 8 se verificaron
 > ejecutándolos sobre una base **en memoria** (11 tablas, 2 vistas, 13 índices,
 > `user_version = 1`, `PRAGMA foreign_key_check` sin violaciones). Versión de
-> esquema propuesta: `user_version = 1`. El esquema no cambió en la revisión 3:
-> el DDL sigue siendo el de la revisión 2.
+> esquema propuesta: `user_version = 1`.
+
+### Cambios de la revisión 4
+
+| Cambio | Motivo |
+|--------|--------|
+| `articulo` gana `CHECK (cantidad_total = cantidad_disponible + cantidad_prestada + cantidad_daniada + cantidad_faltante)` | Refuerzo de RN-02 aprobado para la Etapa 1: la invariante deja de depender solo del servicio |
+| `prestamo_detalle` gana el `CHECK` de coherencia entre `estado` y las cantidades | Refuerzo aprobado para la Etapa 1: el estado derivado no puede discrepar de las cantidades del renglón |
+| Secciones 4.2, 4.6 y 9.4 actualizadas para reflejar los dos `CHECK` | El documento debe describir el esquema real que se entrega en `0001_inicial.sql` |
+
+Ambos `CHECK` se verificaron sobre SQLite 3.50.4 antes de aplicarse y **no
+bloquean ninguna operación válida**: toda escritura de contadores se hace con la
+fila completa en una sola sentencia (§9.3), y el estado se deriva de las
+cantidades en la misma actualización (§5.2 de `REQUIREMENTS.md`).
 
 ### Cambios de la revisión 3
 
@@ -249,7 +261,10 @@ dentro de la misma transacción que inserta el movimiento correspondiente.
 **Invariante (RN-02), verificada en tres niveles:**
 
 1. El servicio la respeta en cada operación.
-2. Todos los `CHECK` individuales impiden valores negativos en cualquier caso.
+2. Un `CHECK` en la propia fila de `articulo` (refuerzo aplicado en la revisión 4)
+   exige que `cantidad_total` sea exactamente la suma de los otros cuatro
+   contadores en toda fila escrita; una fila descuadrada ya no puede existir.
+   Además, los `CHECK` individuales impiden valores negativos en cualquier caso.
 3. `tests/integration/test_reconciliacion.py` recalcula cada cubo desde
    `movimiento_inventario` y compara. Se ejecuta tras cada prueba de inventario,
    préstamo o devolución. Si la consulta de la sección 8.6 devuelve una sola fila,
@@ -377,6 +392,22 @@ Un renglón del préstamo: un artículo y la cantidad entregada.
 
 `UNIQUE (prestamo_id, articulo_id)`: un artículo no se repite dentro del mismo
 préstamo; el servicio suma las cantidades si se repite (RN-18).
+
+**`CHECK` de coherencia del estado (refuerzo aplicado en la revisión 4).** El
+estado es derivado, pero la base no confía en que el servicio lo recalcule bien:
+el `CHECK` exige que cada estado coincida con las cantidades del renglón, con la
+misma derivación que describe `REQUIREMENTS.md` §5.2:
+
+- `pendiente` → `devuelta = 0`, `daniada = 0`, `perdida = 0` (nada volvió);
+- `parcial` → `devuelta > 0` con pendiente `> 0` y sin daños ni pérdidas;
+- `devuelto` → `devuelta > 0`, pendiente `= 0` y sin daños ni pérdidas;
+- `con_incidente` → `daniada > 0` o `perdida > 0` (la mitad visible de la
+  derivación; la otra mitad —un incidente sin cantidades— no es expresable en un
+  `CHECK` de fila y sigue siendo responsabilidad del servicio).
+
+Un estado con cantidades incoherentes, incluido un pendiente negativo por
+devolución en exceso, no corresponde a ningún brazo del `CHECK` y la base lo
+rechaza.
 
 **Cantidad pendiente (RF-DEV-04, con RN-27 como tope de devolución):** es una
 **obligación**, no un cubo de inventario.
@@ -660,7 +691,7 @@ los índices y las consultas de la sección 8 se ejecutaron sin errores sobre
 
 ```sql
 -- ============================================================================
--- StockLend — migración inicial.  user_version = 1   (revisión 2)
+-- StockLend — migración inicial.  user_version = 1   (revisión 4)
 -- ============================================================================
 
 PRAGMA foreign_keys = ON;
@@ -694,7 +725,11 @@ CREATE TABLE articulo (
     cantidad_faltante    INTEGER NOT NULL DEFAULT 0 CHECK (cantidad_faltante   >= 0),
 
     creado_en           TEXT    NOT NULL,
-    actualizado_en      TEXT    NOT NULL
+    actualizado_en      TEXT    NOT NULL,
+
+    -- RN-02 (refuerzo revisión 4): los cuatro cubos suman exactamente el total
+    CHECK (cantidad_total = cantidad_disponible + cantidad_prestada
+                            + cantidad_daniada + cantidad_faltante)
 );
 
 -- -------------------------------------------------------------- estudiante
@@ -734,7 +769,30 @@ CREATE TABLE prestamo_detalle (
     estado              TEXT    NOT NULL
                         CHECK (estado IN ('pendiente', 'parcial', 'devuelto', 'con_incidente')),
     notas               TEXT,
-    UNIQUE (prestamo_id, articulo_id)
+    UNIQUE (prestamo_id, articulo_id),
+
+    -- Estado derivado coherente con las cantidades (refuerzo revisión 4).
+    -- Ver §4.6: pendiente / parcial / devuelto / con_incidente.
+    CHECK (
+        (estado = 'pendiente'
+         AND cantidad_devuelta = 0
+         AND cantidad_daniada = 0
+         AND cantidad_perdida = 0)
+        OR (estado = 'parcial'
+            AND cantidad_devuelta > 0
+            AND cantidad_prestada - cantidad_devuelta
+                - cantidad_daniada - cantidad_perdida > 0
+            AND cantidad_daniada = 0
+            AND cantidad_perdida = 0)
+        OR (estado = 'devuelto'
+            AND cantidad_devuelta > 0
+            AND cantidad_prestada - cantidad_devuelta
+                - cantidad_daniada - cantidad_perdida = 0
+            AND cantidad_daniada = 0
+            AND cantidad_perdida = 0)
+        OR (estado = 'con_incidente'
+            AND (cantidad_daniada > 0 OR cantidad_perdida > 0))
+    )
 );
 
 -- -------------------------------------------------------- articulo_unidad
@@ -1205,12 +1263,12 @@ prueba prevista.**
 | Regla | Garantía en la base (v1) | Validación en el servicio | Prueba prevista |
 |-------|--------------------------|---------------------------|-----------------|
 | RN-01, RN-06 | `CHECK (… >= 0)` en los cinco contadores de `articulo` y en las cantidades de `prestamo_detalle` y `devolucion_detalle` | Calcula el nuevo valor desde el cubo de origen y rechaza el movimiento si quedaría negativo (§9.3) | Etapa 3, pruebas con código `RN-01` y `RN-06` |
-| RN-02 | **Sin CHECK de coherencia** (solo los `CHECK` individuales, ver refuerzo abajo); la base acepta una fila con contadores descuadrados si el servicio no valida | Recalcula los cinco contadores dentro de la misma transacción (§9.2, §9.3) | `tests/integration/test_reconciliacion.py`: las consultas §8.6 y §8.7 devuelven cero filas (RN-49) |
+| RN-02 | `CHECK` de coherencia en `articulo` (revisión 4): `cantidad_total = cantidad_disponible + cantidad_prestada + cantidad_daniada + cantidad_faltante`, además de los `CHECK` individuales `>= 0`; una fila descuadrada ya no puede existir | Recalcula los cinco contadores dentro de la misma transacción, escribiendo la fila completa (§9.2, §9.3) | Etapa 1: `tests/integration/test_integridad.py` rechaza una fila descuadrada; `tests/integration/test_reconciliacion.py` (§8.6, §8.7, RN-49) sigue verificando en tiempo de ejecución que los cubos coinciden con los movimientos |
 | RN-03, RN-07, RN-08 | `prestable` y `activo` con `CHECK IN (0,1)` | Comprueba `disponible > 0`, `cantidad_total > 0` y `prestable` antes de crear el préstamo | Etapa 4, con mensaje que indica el máximo disponible |
 | RN-05 | `movimiento_inventario.motivo` con `CHECK (length(trim(motivo)) > 0)` y `CHECK (cantidad > 0)` | Inserta el movimiento en la **misma transacción** que modifica el contador: no hay cambio sin movimiento | Etapa 3: alta con `cantidad = 5` genera movimiento `alta` de 5; prueba de rollback |
 | RN-18 | `UNIQUE (prestamo_id, articulo_id)` en `prestamo_detalle` | Si el mismo artículo se repite en la solicitud, acumula las cantidades en una sola línea | Etapa 4, prueba con código `RN-18` |
 | RN-21, RN-48 | — (la base no distingue «todo o nada») | Un método público de servicio = una transacción `BEGIN IMMEDIATE` (§9.1); el fallo del segundo renglón revierte el primero (§9.2) | Etapa 4: pruebas de reversión multi-renglón |
-| RN-27, RN-28 | **No expresable en la base**: depende del total acumulado del renglón, no de un valor de una fila | Compara contra `v_prestamo_detalle.cantidad_pendiente` dentro de la transacción; rechaza con «Quedan n unidades…» | Etapa 4: devolver de más se rechaza. Verificado en la revisión 3: **sin esta validación la base acepta la fila** |
+| RN-27, RN-28 | **No expresable en la base**: depende del total acumulado del renglón, no de un valor de una fila | Compara contra `v_prestamo_detalle.cantidad_pendiente` dentro de la transacción; rechaza con «Quedan n unidades…» | Etapa 4: devolver de más se rechaza. Verificado en la revisión 3: **sin esta validación la base acepta la fila**; desde la revisión 4 el `CHECK` de coherencia de `estado` también la rechaza, porque un pendiente negativo no corresponde a ningún estado válido |
 | RN-33 | `incidente` con `CHECK (length(trim(descripcion)) > 0)` | Exige el incidente antes de descontar un daño o una pérdida | Etapa 4, con código `RN-33` |
 | RN-39 | — | Un artículo pendiente nunca se transforma en faltante; solo un incidente genera el movimiento `perdida_*` | Etapa 4: «Un artículo pendiente no aparece como faltante» |
 | RN-44, RN-45 | `CHECK (cantidad > 0)` en `incidente.cantidad` | Toma como tope el pendiente del renglón (origen `prestamo`/`devolucion`) o el disponible (origen `stock`) | Etapa 4, con código `RN-44` |
@@ -1218,20 +1276,28 @@ prueba prevista.**
 | RN-49, RN-61 | — | Contadores y unidades se actualizan en la misma transacción (§9.3) | Reconciliación §8.6 + §8.7 tras cada prueba de inventario, préstamo o devolución |
 | RN-53 | `CHECK (estado <> 'prestada' OR prestamo_detalle_id IS NOT NULL)` en `articulo_unidad` | Asigna la unidad al préstamo y la libera en la misma transacción | Etapa 2 (esquema) y Etapa 4 (flujo) |
 
-**Refuerzos posibles con restricciones SQLite (no aplicados; pendientes de
-aprobación).** SQLite admite `CHECK` que referencian otras columnas de la misma
-fila (verificado en la compilación 3.50.4 que usa Python 3.14). Dos refuerzos
-quedan documentados como candidatos para `0001_inicial.sql`, **sin aplicarlos**:
+**Refuerzos aplicados en la revisión 4 (aprobados para la Etapa 1).** SQLite
+admite `CHECK` que referencian otras columnas de la misma fila (verificado en la
+compilación 3.50.4 que usa Python 3.14). Los dos refuerzos candidatos de la
+revisión 3 están ahora **aplicados** en el DDL de la sección 6 y, por tanto, en
+`0001_inicial.sql`:
 
 1. **RN-02 en `articulo`:**
    `CHECK (cantidad_total = cantidad_disponible + cantidad_prestada + cantidad_daniada + cantidad_faltante)`
-   convertiría el invariante en garantía de esquema. Consecuencia: toda escritura
-   debería pasar por la transacción completa de §9.3; una operación que dejara la
-   fila incoherente aunque fuera momentáneamente sería rechazada por la base.
-2. **`prestamo_detalle.estado` coherente con las cantidades:** un `CHECK` podría
-   prohibir, por ejemplo, `estado = 'devuelto'` con cantidades pendientes. Cubre
-   la mitad de la derivación; la otra mitad (`con_incidente`) depende de la
-   existencia de un incidente, que un `CHECK` de fila no puede ver.
+   convierte el invariante en garantía de esquema. Consecuencia: toda escritura
+   de contadores debe pasar por la transacción completa de §9.3 con la fila
+   completa; una operación que dejara la fila descuadrada, aunque fuera
+   momentáneamente, sería rechazada por la base. Verificado antes de aplicarlo:
+   ninguna operación válida descrita en §9.2, §9.3 y §12 la bloquea (todas
+   escriben los cinco contadores en una sola sentencia), y las pruebas de la
+   Etapa 1 lo demuestran con operaciones reales.
+2. **`prestamo_detalle.estado` coherente con las cantidades:** el `CHECK`
+   reproduce la derivación de `REQUIREMENTS.md` §5.2 (ver §4.6) y prohíbe, por
+   ejemplo, `estado = 'devuelto'` con cantidades pendientes o un estado
+   `pendiente` con algo ya devuelto. Cubre la mitad de la derivación; la otra
+   mitad (`con_incidente` cuando existe un incidente sin cantidades) depende de
+   la existencia del registro en `incidente`, que un `CHECK` de fila no puede
+   ver, y sigue en el servicio.
 
 **No se usan disparadores (`TRIGGER`).** No hay ninguno en el esquema y no se
 añaden: mover la lógica a triggers la sacaría del servicio, donde se prueba y se

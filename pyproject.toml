@@ -1,0 +1,40 @@
+[project]
+name = "stocklend"
+version = "0.1.0"
+description = "StockLend - gestion de utensilios y prestamos de laboratorio (aplicacion de escritorio)"
+readme = "README.md"
+requires-python = ">=3.10,<3.15"
+dependencies = [
+    "PySide6==6.11.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==9.1.1",
+    "pytest-qt==4.5.0",
+    "ruff==0.16.9",
+    "PyInstaller==6.22.3",
+]
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["stocklend*"]
+
+[tool.setuptools.package-data]
+stocklend = ["data/migrations/*.sql"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+qt_api = "pyside6"
+addopts = "-ra"

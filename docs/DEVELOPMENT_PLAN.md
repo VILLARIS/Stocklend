@@ -78,7 +78,8 @@ está inicializado con su primer commit ya publicado en `origin/main`. El modelo
 datos está verificado ejecutando su DDL **y sus consultas de referencia** sobre una
 base en memoria: 11 tablas, 2 vistas, 13 índices, `PRAGMA foreign_key_check` sin
 violaciones y los `CHECK` de integridad rechazan lo que deben. La documentación
-consolidada corresponde a la revisión 3 de `DATABASE_DESIGN.md`. El diseño de
+consolidada corresponde a la revisión 4 de `DATABASE_DESIGN.md` (incluye los dos
+`CHECK` de coherencia aprobados para la Etapa 1). El diseño de
 interfaz está escrito como propuesta, **sin ninguna pantalla implementada ni
 maquetada**.
 
