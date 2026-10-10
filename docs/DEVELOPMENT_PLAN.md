@@ -310,6 +310,27 @@ paso de los listados a hilos.
 - Un mensaje de «cantidad insuficiente» indica el número exacto disponible.
 - La búsqueda responde mientras se escribe (RF-INV-04).
 
+**Estado (Etapa 6):** implementada. `stocklend/ui/dialogs/` añade los formularios de
+operación: `inventario.py` (`ArticuloDialog`, `AjusteDialog`, `CategoriaDialog`,
+`UnidadEstadoDialog`, `UnidadEditarDialog`), `estudiante.py` (`EstudianteDialog`,
+`FichaEstudianteDialog`), `prestamo.py` (`NuevoPrestamoDialog` en tres pasos con
+`QStackedWidget` y `DetallePrestamoDialog`), `devolucion.py` (`DevolucionDialog`) e
+`incidente.py` (`IncidenteDialog`, `DetalleIncidenteDialog`,
+`ResolverIncidenteDialog`, `AsignarResponsabilidadDialog`). Todas las acciones que
+tocan cantidades o historial piden confirmación propia (`ConfirmDialog`; la anulación
+de un préstamo exige además escribir «ANULAR»). Las páginas de operación
+(`pages/inventario.py` con pestañas Artículos/Unidades/Categorías, `estudiantes.py`,
+`prestamos.py`, `devoluciones.py` e `incidentes.py`) comparten el patrón
+`PaginaListado`, con menú contextual por fila (`_acciones_fila`), estados vacíos con
+icono y `avisar()` sobre `Toast`. `main_window.py` compone las páginas con el objeto
+`Servicios` de `core/container.py`. Los diálogos no duplican reglas: llaman a los
+servicios y estos aplican RN-05, RN-15, RN-28, RN-33, RN-42, RN-50, RN-55, RN-56 y
+RN-61. La suite pasa completa (**391 pruebas**; incluye 29 nuevas en
+`tests/gui/test_dialogos_operacion.py` que ejercitan cada diálogo contra la base
+SQLite temporal) y `ruff` no reporta hallazgos. El paso de los listados a hilos sigue
+diferido. Limitación documentada: no existe `IncidenteService.reabrir_incidente`, de
+modo que un incidente resuelto no se reabre desde la interfaz.
+
 ---
 
 ### Etapa 7 — Panel y reportes

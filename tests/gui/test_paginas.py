@@ -67,7 +67,7 @@ def test_panel_de_detalle_muestra_la_fila(ventana, servicios):
 
 
 def test_listados_muestran_estado_vacio_con_base_vacia(ventana):
-    for clave in ("estudiantes", "prestamos", "incidentes"):
+    for clave in ("estudiantes", "prestamos", "devoluciones", "incidentes"):
         pagina = ventana.paginas[clave]
         assert pagina.tabla._pila.currentIndex() == 1, clave
 
@@ -85,7 +85,6 @@ def test_estudiantes_lista_datos_reales(ventana, servicios):
 def test_paginas_provisionales_avisan_de_su_etapa(ventana):
     esperado = {
         "dashboard": "Etapa 7",
-        "devoluciones": "Etapa 6",
         "reportes": "Etapa 7",
         "respaldo": "Etapa 8",
     }
@@ -100,7 +99,7 @@ def test_paginas_provisionales_avisan_de_su_etapa(ventana):
 
 
 def test_estados_vacios_de_listado_llevan_icono(ventana):
-    for clave in ("inventario", "estudiantes", "prestamos", "incidentes"):
+    for clave in ("inventario", "estudiantes", "prestamos", "devoluciones", "incidentes"):
         pagina = ventana.paginas[clave]
         assert pagina.tabla._pila.currentIndex() == 1, clave
         assert pagina.tabla.vacio.icono.pixmap() is not None, clave

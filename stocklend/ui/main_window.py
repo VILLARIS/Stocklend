@@ -85,17 +85,17 @@ class VentanaPrincipal(QMainWindow):
         if clave == "dashboard":
             return PaginaPanel()
         if clave == "inventario":
-            return PaginaInventario(s.inventario)
+            return PaginaInventario(s)
         if clave == "estudiantes":
-            return PaginaEstudiantes(s.estudiantes, s.prestamos)
+            return PaginaEstudiantes(s)
         if clave == "prestamos":
-            return PaginaPrestamos(s.prestamos, s.estudiantes)
+            return PaginaPrestamos(s)
         if clave == "devoluciones":
-            return PaginaDevoluciones()
+            return PaginaDevoluciones(s)
         if clave == "reportes":
             return PaginaReportes()
         if clave == "incidentes":
-            return PaginaIncidentes(s.incidentes, s.inventario, s.estudiantes)
+            return PaginaIncidentes(s)
         if clave == "respaldo":
             return PaginaRespaldo()
         return PaginaConfiguracion()

@@ -8,11 +8,11 @@ Etapa 4, `PrestamoService`, `DevolucionService` e `IncidenteService`.
 
 from __future__ import annotations
 
-from .devolucion_service import DevolucionService
+from .devolucion_service import DevolucionService, LineaDevolucion
 from .estudiante_service import EstudianteService
 from .incidente_service import IncidenteService
 from .inventario_service import InventarioService
-from .prestamo_service import PrestamoService
+from .prestamo_service import LineaPrestamo, PrestamoService
 from .unidad_service import UnidadService
 
 __all__ = [
@@ -20,6 +20,8 @@ __all__ = [
     "EstudianteService",
     "IncidenteService",
     "InventarioService",
+    "LineaDevolucion",
+    "LineaPrestamo",
     "PrestamoService",
     "UnidadService",
 ]

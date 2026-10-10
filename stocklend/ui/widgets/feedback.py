@@ -127,6 +127,10 @@ class InlineNotice(QWidget):
         self.accion.setVisible(bool(accion_texto))
         disposicion.addWidget(self.accion, 0, Qt.AlignmentFlag.AlignVCenter)
 
+    def set_texto(self, texto: str) -> None:
+        """Cambia el texto del aviso sin reconstruir el widget."""
+        self.texto.setText(texto)
+
 
 class Toast(QWidget):
     """Aviso flotante de resultado, no modal (`§5.4`)."""

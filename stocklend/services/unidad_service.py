@@ -195,6 +195,13 @@ class UnidadService:
                 desplazamiento=desplazamiento,
             )
 
+    def listar_por_prestamo_detalle(
+        self, prestamo_detalle_id: int
+    ) -> list[ArticuloUnidad]:
+        """Unidades que salieron en un renglón de préstamo (read model étapa 4)."""
+        with transaction(self._conn):
+            return self._unidades.listar_por_prestamo_detalle(prestamo_detalle_id)
+
     def contar_por_estado(
         self, articulo_id: int, *, estado: EstadoUnidad | None = None
     ) -> int:

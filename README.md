@@ -11,14 +11,15 @@ artículo y de cada estudiante quede guardado de forma confiable.
 > **Estado del proyecto: en desarrollo.**
 > Existen la base de datos con sus migraciones (Etapa 1), el dominio con sus
 > repositorios (Etapa 2), los servicios de inventario, unidades y estudiantes
-> (Etapa 3), los servicios de préstamos, devoluciones e incidentes (Etapa 4) y el
-> armazón visual con PySide6 (Etapa 5), con pruebas automatizadas en verde.
+> (Etapa 3), los servicios de préstamos, devoluciones e incidentes (Etapa 4), el
+> armazón visual con PySide6 (Etapa 5) y las pantallas de operación (Etapa 6), con
+> pruebas automatizadas en verde.
 > **Todavía no hay ejecutable empaquetado.**
 >
 > El diseño de interfaz está escrito como propuesta en los cuatro documentos
-> `UI_*.md`. La Etapa 5 ya materializa el armazón (ventana, navegación y tema) y
-> conecta los listados a datos reales; las pantallas de operación completas llegan
-> en etapas posteriores.
+> `UI_*.md`. La Etapa 5 materializa el armazón (ventana, navegación y tema) y la
+> Etapa 6 las pantallas de operación completas (altas, ediciones, ajustes,
+> préstamos, devoluciones e incidentes).
 
 ---
 
@@ -160,7 +161,7 @@ StockLend/
 | 3 | Servicios de inventario y estudiantes *(implementada)* |
 | 4 | Servicios de préstamos, devoluciones e incidentes *(implementada)* |
 | 5 | Armazón de la interfaz: navegación y tema *(implementada, con la corrección visual finalizada)* |
-| 6 | Pantallas de operación |
+| 6 | Pantallas de operación *(implementada)* |
 | 7 | Panel, reportes y exportaciones |
 | 8 | Copias de seguridad y restauración |
 | 9 | Empaquetado en Windows |
@@ -185,13 +186,18 @@ reconcilian con el libro de movimientos. La **Etapa 5** está implementada: el
 armazón visual con `PySide6` (`stocklend/ui/`), ventana única, barra lateral de
 navegación, cabecera contextual, tema generado desde tokens y páginas apiladas con
 `QStackedWidget`. Los listados de Inventario, Estudiantes, Préstamos e Incidentes ya
-consultan datos reales y muestran su estado vacío con icono; Panel, Devoluciones,
-Reportes, Respaldo y Configuración son provisionales y avisan de su etapa. La
-**corrección visual de la Etapa 5 está finalizada**: tema en claro generado desde
+consultan datos reales y muestran su estado vacío con icono. La **Etapa 6** está
+implementada: las pantallas de operación completas (`stocklend/ui/dialogs/` con los
+formularios de artículo, ajuste, categoría, unidad, estudiante, préstamo, devolución
+e incidente; y `stocklend/ui/pages/` con Inventario por pestañas
+Artículos/Unidades/Categorías, Estudiantes, Préstamos, Devoluciones e Incidentes), con
+menú contextual por fila, confirmaciones propias y edición sobre datos reales. Panel,
+Reportes, Respaldo y Configuración siguen siendo provisionales y avisan de su etapa.
+La **corrección visual de la Etapa 5 está finalizada**: tema en claro generado desde
 tokens con contraste WCAG, barra lateral blanca con filas de 40 px e iconografía SVG
 local (elemento activo azul con texto blanco, estados hover y focus), y ficha de
 detalle que solo aparece al seleccionar una fila y se cierra con su botón ×. La
-suite `pytest` cubre las cinco etapas (**355 pruebas**) y `ruff` no reporta
+suite `pytest` cubre las seis etapas (**391 pruebas**) y `ruff` no reporta
 hallazgos. **Todavía no hay ejecutable empaquetado.**
 
 Las dos decisiones que quedaban abiertas **ya no bloquean nada**, porque el diseño

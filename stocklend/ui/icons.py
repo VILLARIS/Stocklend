@@ -37,6 +37,14 @@ _PLANTILLAS: dict[str, str] = {
     "incidentes": f'<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">'
     f'<path {_TRAZO} d="M12 3.8 3 20h18z"/><path {_TRAZO} d="M12 10.4v4"/>'
     f'<path {_TRAZO} d="M12 17.2h.01"/></svg>',
+    "unidades": f'<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">'
+    f'<rect {_TRAZO} x="4" y="4" width="7" height="7" rx="1"/>'
+    f'<rect {_TRAZO} x="13" y="4" width="7" height="7" rx="1"/>'
+    f'<rect {_TRAZO} x="4" y="13" width="7" height="7" rx="1"/>'
+    f'<rect {_TRAZO} x="13" y="13" width="7" height="7" rx="1"/></svg>',
+    "categorias": f'<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">'
+    f'<path {_TRAZO} d="M4 6.4c0-.9.7-1.6 1.6-1.6h4.1c.6 0 1.1.3 1.4.8l.8 1.4h6.5'
+    f'c.9 0 1.6.7 1.6 1.6v9.4c0 .9-.7 1.6-1.6 1.6H5.6A1.6 1.6 0 0 1 4 18z"/></svg>',
     "respaldo": f'<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">'
     f'<path {_TRAZO} d="M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3v12c0 1.7-3.6 3-8 3s-8-1.3-8-3z"/>'
     f'<path {_TRAZO} d="M4 6v12"/><path {_TRAZO} d="M20 6v12"/><path {_TRAZO} d="M4 12h16"/></svg>',

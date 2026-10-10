@@ -38,6 +38,8 @@ def _estilos_estado() -> dict[str, tuple[str, str]]:
         "Daño": (_COL.advertencia_claro, _COL.advertencia_texto),
         "Pérdida": (_COL.error_claro, _COL.error),
         "Otro": (_COL.borde_suave, _COL.texto_secundario),
+        "Prestada": (_COL.azul_claro, _COL.azul_primario),
+        "Baja": (_COL.borde_suave, _COL.texto_secundario),
         "Depósito": (_COL.azul_claro, _COL.azul_primario),
         "Préstamo": (_COL.azul_claro, _COL.azul_primario),
         "Devolución": (_COL.azul_claro, _COL.azul_primario),
@@ -67,6 +69,12 @@ class TablaModelo(QAbstractTableModel):
     def set_filas(self, filas: list[list[Any]]) -> None:
         self.beginResetModel()
         self._filas = [list(fila) for fila in filas]
+        self.endResetModel()
+
+    def set_columnas(self, columnas: list[str]) -> None:
+        self.beginResetModel()
+        self._columnas = list(columnas)
+        self._filas = []
         self.endResetModel()
 
     def fila(self, indice: int) -> list[Any]:
@@ -197,6 +205,10 @@ class DataTable(QWidget):
         self._pila.setCurrentIndex(0 if filas else 1)
         if not filas:
             self.tabla.clearSelection()
+
+    def set_columnas(self, columnas: list[str]) -> None:
+        self.modelo.set_columnas(columnas)
+        self._pila.setCurrentIndex(1)
 
     def set_delegate(self, columna: int, delegate: QStyledItemDelegate) -> None:
         self.tabla.setItemDelegateForColumn(columna, delegate)

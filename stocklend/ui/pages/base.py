@@ -10,11 +10,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from PySide6.QtCore import QModelIndex
-from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
+from PySide6.QtCore import QModelIndex, Qt
+from PySide6.QtWidgets import QHBoxLayout, QMenu, QVBoxLayout, QWidget
 
 from ..errors import mensaje_error
-from ..widgets.feedback import DetailPanel, EmptyState, InlineNotice
+from ..widgets.feedback import DetailPanel, EmptyState, InlineNotice, Toast
 from ..widgets.inputs import SearchBar
 from ..widgets.primitives import SectionHeader, Toolbar
 from ..widgets.table import DataTable
@@ -94,6 +94,7 @@ class PaginaListado(PaginaBase):
     ) -> None:
         super().__init__(titulo, subtitulo, accion_texto, parent)
         self._termino = ""
+        self._registros: list[Any] = []
         self.columnas = list(columnas)
         self.buscador = SearchBar(placeholder)
         self.buscador.busqueda_cambiada.connect(self._cambiar_termino)
@@ -101,6 +102,9 @@ class PaginaListado(PaginaBase):
         self.tabla.fila_seleccionada.connect(self._mostrar_detalle)
         self.detalle = DetailPanel()
         self.detalle.cerrado.connect(self._ocultar_detalle)
+        vista = self.tabla.tabla
+        vista.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        vista.customContextMenuRequested.connect(self._abrir_menu_fila)
 
         barra = self.activar_barra()
         barra.agregar(self.buscador)
@@ -139,6 +143,46 @@ class PaginaListado(PaginaBase):
         if vista.currentIndex().isValid():
             vista.setCurrentIndex(QModelIndex())
 
+    # ---------------------------------------------------------------------- fila
+    def _acciones_fila(self, indice: int) -> list[tuple]:
+        """Acciones del menú contextual de una fila.
+
+        Cada elemento es `(texto, devolución)` o `(texto, devolución, habilitado)`.
+        La lista vacía desactiva el menú; la base no impone ninguna acción.
+        """
+        return []
+
+    def _registro(self, indice: int) -> Any:
+        """Entidad asociada a la fila `indice`, si la página la dejó en `_registros`."""
+        if 0 <= indice < len(self._registros):
+            return self._registros[indice]
+        return None
+
+    def _abrir_menu_fila(self, posicion) -> None:
+        vista = self.tabla.tabla
+        indice = vista.indexAt(posicion)
+        if not indice.isValid():
+            return
+        acciones = self._acciones_fila(indice.row())
+        if not acciones:
+            return
+        vista.selectRow(indice.row())
+        menu = QMenu(self)
+        for item in acciones:
+            texto, devolucion = item[0], item[1]
+            habilitado = item[2] if len(item) > 2 else True
+            accion = menu.addAction(texto)
+            accion.setEnabled(bool(habilitado))
+            if habilitado and devolucion is not None:
+                accion.triggered.connect(
+                    lambda _checked=False, cb=devolucion: cb()
+                )
+        menu.exec(vista.viewport().mapToGlobal(posicion))
+
+    def avisar(self, texto: str, tono: str = "correcto") -> None:
+        """Muestra un aviso flotante sobre la ventana de la página."""
+        Toast.mostrar(self.window(), texto, tono)
+
     # ------------------------------------------------------------------ interno
 
     def _cambiar_termino(self, termino: str) -> None:
@@ -147,6 +191,7 @@ class PaginaListado(PaginaBase):
 
     def cargar(self) -> None:
         self._ocultar_detalle()
+        self._registros = []
         try:
             filas = self._obtener_filas(self._termino)
         except Exception as exc:  # noqa: BLE001 - la interfaz nunca se cierra

@@ -227,7 +227,7 @@ transacción, comparten lógica por `_comun`. `DashboardService`, `ReporteServic
 | `sidebar.py` | Menú lateral de navegación |
 | `pages/` | Una clase por sección: `dashboard.py`, `inventario.py`, `estudiantes.py`, `prestamos.py`, `devoluciones.py`, `incidentes.py`, `reportes.py`, `respaldo.py`, `configuracion.py` |
 | `widgets/` | Componentes reutilizables: `DataTable`, `SearchBar`, `StatCard`, `ConfirmDialog`, `FormField`. El catálogo completo, con su anatomía y sus estados, está en `UI_COMPONENTS.md` |
-| `dialogs/` | Diálogos modales: confirmación, alta de artículo, alta de estudiante, devolución |
+| `dialogs/` | Diálogos modales: base de formularios (`form.py`), confirmación (`confirm.py`), selección (`seleccion.py`) y los formularios de inventario, estudiante, préstamo, devolución e incidente |
 | `theme.py` | Paleta de colores y hoja de estilos Qt (QSS), **generada a partir de los tokens de `UI_DESIGN.md` sección 3**, no escrita a mano |
 | `formatters.py` | Fechas, cantidades, folios en formato legible para la vista |
 | `errors.py` | Traducción de excepciones de dominio a mensajes en español para los componentes de `UI_COMPONENTS.md` |
@@ -251,6 +251,17 @@ en el hilo de la interfaz; el traslado a `QThreadPool` queda para una etapa
 posterior. `formatters.py` y `errors.py` completan la capa. Las contradicciones
 C-1…C-10 de `UI_DESIGN.md` §10 se resolvieron según las propuestas documentadas y
 quedan registradas para revisión del usuario.
+
+**Estado (Etapa 6):** implementadas las pantallas de operación. `dialogs/` añade
+`form.py` (`FormDialog`), `seleccion.py` (`BuscadorResultados`), `inventario.py`
+(artículo, ajuste, categoría y unidad), `estudiante.py` (alta/edición y ficha),
+`prestamo.py` (asistente de tres pasos y detalle), `devolucion.py` e `incidente.py`
+(registro, detalle, resolución y responsabilidad). `pages/` reemplaza las pantallas
+provisionales de Devoluciones y conecta Inventario (con pestañas Artículos / Unidades
+/ Categorías), Estudiantes, Préstamos, Devoluciones e Incidentes a datos reales, con
+menú contextual por fila y `avisar()` sobre `Toast`. `main_window.py` compone cada
+página con el objeto `Servicios` de `core/container.py`. Panel, Reportes, Respaldo y
+Configuración siguen siendo provisionales.
 
 ### 3.5 `stocklend/core/` — Soporte transversal
 
