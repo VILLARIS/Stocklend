@@ -577,3 +577,25 @@ duplicados y cómo se concilian las diferencias con el conteo real. Es un proyec
 adicional, con su propio alcance. Lo razonable es empezar con StockLend vacío y
 que el inventario real se registre mediante altas y ajustes documentados, de modo
 que el primer conteo quede registrado como el movimiento inicial.
+
+---
+
+## 10. Migración a Tauri 2 + React
+
+El proyecto se migra de Python + PySide6 a Tauri 2 + React + TypeScript + Vite + Tailwind CSS 4.
+Las etapas 0 a 6.5 de la implementación Python se conservan como referencia; el código no se elimina.
+Las reglas de negocio (RN-01 a RN-61), requisitos (RF/RNF) y ADRs siguen vigentes.
+
+| # | Fase | Resultado verificable | Depende de | Estado |
+|---|------|----------------------|------------|--------|
+| M-0 | Planificación de migración | Análisis del proyecto, estructura propuesta, documentación leída | Etapa 6.5 Python | Completada |
+| M-1 | Inicialización Tauri 2 | Proyecto compila y abre ventana vacía con React + Tailwind. Código Python intacto | M-0 | Completada |
+| M-2 | Base de datos SQLite en Rust | `rusqlite` conectado, migración `0001_inicial.sql` ejecutada, PRAGMAs verificados | M-1 | Pendiente |
+| M-3 | Dominio y repositorios en Rust | Structs, enums, repositorios con SQL parametrizado, pruebas `cargo test` | M-2 | Pendiente |
+| M-4 | Servicios y commands Tauri | 61 reglas de negocio portadas, IPC funcional, pruebas por RN-xx | M-3 | Pendiente |
+| M-5 | Layout y navegación React | Sidebar, AppLayout, tokens de `UI_DESIGN.md` aplicados, navegación entre páginas | M-1, M-4 | Pendiente |
+| M-6 | Pantallas operativas | 10 pantallas de `UI_SCREENS.md` conectadas a datos reales | M-5 | Pendiente |
+| M-7 | Dashboard y reportes | Etapa 7 original completada en React + Rust | M-6 | Pendiente |
+| M-8 | Respaldo y recuperación | Etapa 8 original completada | M-6 | Pendiente |
+| M-9 | Empaquetado MSI Windows | `tauri build` genera instalador funcional, prueba en equipo limpio | M-7, M-8 | Pendiente |
+| M-10 | Limpieza y estabilización | Código Python archivado o eliminado, uso real con Sonia | M-9 | Pendiente |

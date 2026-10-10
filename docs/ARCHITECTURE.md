@@ -521,6 +521,10 @@ Formato: decisión, motivo, alternativa descartada, revisión prevista.
 | ADR-13 | Doce tipos de movimiento, cada uno con su cubo de origen declarado | El efecto sobre los contadores es determinista: el servicio no «decide» de dónde resta, y la reconciliación del libro es una igualdad exacta | Dos o cuatro tipos genéricos (`danio`, `perdida`) con el cubo decidido en tiempo de ejecución | Alguna operación necesite un efecto que no encaje en ningún cubo existente |
 | ADR-14 | Solo dos vistas de lectura (`v_prestamo_detalle`, `v_prestamo_resumen`) | Una vista por cada consulta duplica el esquema y añade un sitio más donde algo puede quedar desactualizado; a este volumen una consulta en el repositorio es igual de clara | Cinco vistas (`v_inventario`, `v_alertas_prestamos`, `v_alertas_incidentes`, …) | El número de consultas repetidas que justifique una vista |
 | ADR-15 | Sin campos de contacto, sin `recibido_por` ni `registrado_por` | Sistema de un solo usuario y sin red: esos campos serían constantes y se pagarían en cada lectura y cada verificación | Mantener columnas que siempre valen lo mismo | Aparezca un segundo usuario, una segunda sede o un envío de correo |
+| ADR-16 | Migración de PySide6 a Tauri 2 + React | El empaquetado con PyInstaller genera ejecutables pesados y la interfaz Qt es difícil de modernizar. Tauri 2 produce binarios más ligeros, usa WebView2 nativo de Windows y permite construir la UI con React + Tailwind CSS manteniendo el backend en Rust para seguridad y rendimiento | Electron (demasiado pesado, requiere Chromium), mantener PySide6 (limita la modernización visual) | Se complete la migración y se verifique estabilidad en producción |
+| ADR-17 | Backend en Rust con `rusqlite` embebido | Reemplaza el módulo `sqlite3` de Python. La feature `bundled` compila SQLite directamente en el binario, eliminando dependencias externas. Soporta todos los PRAGMAs, CHECKs y transacciones definidos en ADR-02, ADR-09 y ADR-10 | `sqlx` (requiere conexión asíncrona y macros de compilación que complican el build offline), ORM como Diesel (añade abstracción innecesaria al volumen de datos del proyecto) | Se necesite una función de SQLite no soportada por `rusqlite` |
+| ADR-18 | Frontend con React + TypeScript + Vite + Tailwind CSS 4 | Reemplaza la capa `ui/` de PySide6. Los tokens de diseño de `UI_DESIGN.md` se mapean directamente a la configuración de Tailwind. Lucide React provee la iconografía. Todo se renderiza dentro del WebView2 de Tauri sin necesidad de servidor externo | Svelte, Vue (menor ecosistema de componentes accesibles listos para uso offline), QML vía Tauri (no estándar) | Se requiera SSR o características específicas de otro framework |
+| ADR-19 | Comunicación frontend-backend exclusivamente via `tauri::command` | Reemplaza la inyección directa de servicios de `container.py`. El frontend llama comandos tipados mediante `invoke()`. Las reglas de negocio siguen aisladas en la capa `services/` de Rust, nunca en el frontend | Llamadas directas a FFI desde JavaScript, WebSocket local | Aparezca un segundo consumidor de la lógica (CLI, script) que justifique exponer puertos |
 
 ---
 
@@ -635,7 +639,93 @@ estimado, en cuyo caso se evaluaría un archivado anual de movimientos antiguos.
 
 ---
 
-## 12. Contexto que se revisará más adelante
+## 13. Migración a Tauri 2 (Fase 1)
+
+**Estado:** Fase 1 completada. El código Python se conserva intacto como referencia.
+
+### 13.1 Stack tecnológico actual
+
+| Componente | Tecnología | Versión |
+|------------|-----------|---------|
+| Frontend | React + TypeScript | 19.1 / ~6.0 |
+| Build tool | Vite | 8.3.4 |
+| Estilos | Tailwind CSS 4 (via `@tailwindcss/vite`) | 4.1.11 |
+| Iconografía | Lucide React | 0.511.0 |
+| Backend | Rust | 1.99.0 |
+| Framework escritorio | Tauri 2 | 2.12.2 |
+| Base de datos | SQLite via `rusqlite` (pendiente Fase 2) | — |
+| WebView | WebView2 | 154.0.4258.62 |
+| Plataforma | Windows x86_64 MSVC | — |
+
+### 13.2 Estructura de carpetas añadida
+
+```
+StockLend/
+├── src/                          Frontend React
+│   ├── App.tsx                   Pantalla inicial de verificación
+│   ├── main.tsx                  Punto de entrada React
+│   ├── index.css                 Tailwind CSS 4 + tokens de UI_DESIGN.md
+│   ├── vite-env.d.ts
+│   ├── components/ui/            Primitivos (Button, Input, Badge, Dialog...)
+│   ├── components/layout/        Sidebar, PageHeader, AppLayout
+│   ├── pages/                    10 pantallas de REQUIREMENTS.md
+│   ├── hooks/                    Custom hooks por entidad
+│   ├── lib/                      invoke wrappers, types, formatters
+│   ├── assets/                   SVGs, imágenes
+│   └── styles/                   Estilos adicionales
+│
+├── src-tauri/                    Backend Rust
+│   ├── Cargo.toml                Dependencias Rust (tauri 2, serde, rusqlite futuro)
+│   ├── tauri.conf.json           Ventana 1280×800, min 1024×640, id com.stocklend.app
+│   ├── build.rs
+│   ├── capabilities/default.json Permisos Tauri 2
+│   ├── icons/                    Iconos generados por Tauri
+│   └── src/
+│       ├── main.rs               Entry point con windows_subsystem
+│       ├── lib.rs                Builder de Tauri, registro de commands
+│       ├── core/                 paths.rs, config.rs, constants.rs
+│       ├── db/                   connection.rs, migrator.rs, migrations/
+│       ├── domain/               entities.rs, enums.rs, value_objects.rs, errors.rs
+│       ├── repositories/         Un archivo por entidad
+│       ├── services/             Lógica de negocio (RN-01 a RN-61)
+│       └── commands/             #[tauri::command] IPC handlers
+│
+├── package.json                  Dependencias Node
+├── tsconfig.json                 Configuración TypeScript
+├── vite.config.ts                Vite + @tailwindcss/vite + Tauri settings
+├── index.html                    lang="es", título StockLend
+│
+├── stocklend/                    CÓDIGO PYTHON CONSERVADO INTACTO
+├── tests/                        PRUEBAS PYTHON CONSERVADAS
+├── docs/                         DOCUMENTACIÓN CONSERVADA
+└── pyproject.toml                CONFIGURACIÓN PYTHON CONSERVADA
+```
+
+### 13.3 Correspondencia entre capas Python y Tauri
+
+| Capa Python | Equivalente Tauri | Estado |
+|-------------|-------------------|--------|
+| `stocklend/ui/` (PySide6) | `src/` (React + Tailwind) | Armazón creado, pantallas pendientes |
+| `stocklend/services/` | `src-tauri/src/services/` | Pendiente portar lógica |
+| `stocklend/data/repositories/` | `src-tauri/src/repositories/` | Pendiente portar SQL |
+| `stocklend/domain/` | `src-tauri/src/domain/` | Pendiente portar structs/enums |
+| `stocklend/core/paths.py` | `src-tauri/src/core/paths.rs` | Pendiente implementar |
+| `stocklend/core/container.py` | `tauri::State` en `lib.rs` | Pendiente implementar |
+| `pyproject.toml` + PyInstaller | `Cargo.toml` + `tauri.conf.json` | Configurado |
+
+### 13.4 Decisiones de configuración de ventana
+
+La ventana principal (`tauri.conf.json`) mantiene las dimensiones definidas en `UI_DESIGN.md` sección 4.3:
+- Tamaño inicial: 1280 × 800 px
+- Tamaño mínimo: 1024 × 640 px
+- Redimensionable: sí
+- Decoraciones nativas de Windows: sí (sin barra de título personalizada por ahora)
+- CSP: null (sin restricciones de red necesarias al ser offline total)
+- Targets de bundle: solo `msi` (Windows exclusivo)
+
+---
+
+## 14. Contexto que se revisará más adelante
 
 - Definición exacta de la ubicación de datos en el equipo de la facultad.
 - Política de plazo (ADR-04) y si los préstamos vencen por curso.

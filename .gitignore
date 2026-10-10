@@ -182,6 +182,13 @@ swapfile.sys
 .*.kdev_private/
 
 
+# --- Node / Tauri / Vite ----------------------------------------------------
+node_modules/
+dist/
+target/
+src-tauri/gen/
+src-tauri/target/
+
 # --- Otros ------------------------------------------------------------------
 # Certificados y material de firma de PyInstaller.
 # *.pem y *.p12 ya estan cubiertos mas arriba, en "Datos personales y secretos".
