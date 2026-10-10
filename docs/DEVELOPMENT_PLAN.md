@@ -258,6 +258,27 @@ La suite pasa completa (296 pruebas) y `ruff` no reporta hallazgos.
 - `tests/test_architecture.py` confirma que `ui/` no importa `sqlite3` y que
   `services/` no importa `PySide6` (RNF-15, RNF-16).
 
+**Estado (Etapa 5):** implementada y con la **corrección visual finalizada**. La
+ventana única (`main_window.py`) tiene barra lateral fija de 240 px, `QStackedWidget`,
+cabecera contextual por página y barra de estado; los atajos `Ctrl+1…7`, `Ctrl+,` y
+`F5` cambian o recargan la sección. `theme.py` genera el QSS desde tokens reales en
+claro (fondo `#F5F7FA`, sidebar `#FFFFFF`, activo `#1E5AA8`) con pares de contraste
+WCAG verificados; los iconos de navegación y de estado vacío se renderizan desde
+plantillas SVG locales (`icons.py`), sin iconos de terceros. La barra lateral usa
+filas de 40 px, elemento activo con relleno azul completo y estados hover/focus. El
+`DetailPanel` solo aparece con una fila seleccionada y se cierra con su botón ×.
+El catálogo base vive en `widgets/` y `dialogs/`. Los listados de Inventario,
+Estudiantes, Préstamos e Incidentes consultan datos reales con su estado vacío
+exacto; Panel, Devoluciones, Reportes, Respaldo y Configuración son provisionales y
+avisan de su etapa sin mostrar datos inventados. `errors.py` traduce las excepciones
+a español. La suite pasa completa (**355 pruebas**; 33 de interfaz en `tests/gui`) y
+`ruff` no reporta hallazgos; la verificación manual con capturas offscreen cubre las
+9 secciones a 1360×840 y 1024×640. La carga de datos es síncrona; el paso a hilos se
+difiere a la Etapa 6. Las contradicciones C-1…C-10 de `UI_DESIGN.md` §10 se aplicaron
+según lo documentado. **Queda pendiente para la Etapa 6:** las pantallas de operación
+(altas, ediciones y bajas), los tamaños de icono en botones, tablas y pastillas, y el
+paso de los listados a hilos.
+
 ---
 
 ### Etapa 6 — Pantallas de operación

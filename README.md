@@ -11,12 +11,14 @@ artículo y de cada estudiante quede guardado de forma confiable.
 > **Estado del proyecto: en desarrollo.**
 > Existen la base de datos con sus migraciones (Etapa 1), el dominio con sus
 > repositorios (Etapa 2), los servicios de inventario, unidades y estudiantes
-> (Etapa 3) y los servicios de préstamos, devoluciones e incidentes (Etapa 4), con
-> pruebas automatizadas en verde. **Todavía no hay pantallas ni ejecutable.**
+> (Etapa 3), los servicios de préstamos, devoluciones e incidentes (Etapa 4) y el
+> armazón visual con PySide6 (Etapa 5), con pruebas automatizadas en verde.
+> **Todavía no hay ejecutable empaquetado.**
 >
 > El diseño de interfaz está escrito como propuesta en los cuatro documentos
-> `UI_*.md`. Eso es una especificación, no una maqueta: no hay todavía ningún widget
-> de PySide6, ni una hoja de estilos, ni un icono en el repositorio.
+> `UI_*.md`. La Etapa 5 ya materializa el armazón (ventana, navegación y tema) y
+> conecta los listados a datos reales; las pantallas de operación completas llegan
+> en etapas posteriores.
 
 ---
 
@@ -157,7 +159,7 @@ StockLend/
 | 2 | Dominio y acceso a datos *(implementada)* |
 | 3 | Servicios de inventario y estudiantes *(implementada)* |
 | 4 | Servicios de préstamos, devoluciones e incidentes *(implementada)* |
-| 5 | Armazón de la interfaz: navegación y tema |
+| 5 | Armazón de la interfaz: navegación y tema *(implementada, con la corrección visual finalizada)* |
 | 6 | Pantallas de operación |
 | 7 | Panel, reportes y exportaciones |
 | 8 | Copias de seguridad y restauración |
@@ -179,8 +181,18 @@ individual) y `EstudianteService` (alta, edición, búsqueda e historial). La
 anulación), `DevolucionService` (devoluciones totales y parciales con cierre
 automático) e `IncidenteService` (daños y pérdidas de `stock`, `prestamo` y
 `devolucion`). Cada método público abre una sola transacción y los contadores se
-reconcilian con el libro de movimientos. La suite `pytest` cubre las cuatro etapas
-y `ruff` no reporta hallazgos. **Todavía no hay pantallas ni ejecutable.**
+reconcilian con el libro de movimientos. La **Etapa 5** está implementada: el
+armazón visual con `PySide6` (`stocklend/ui/`), ventana única, barra lateral de
+navegación, cabecera contextual, tema generado desde tokens y páginas apiladas con
+`QStackedWidget`. Los listados de Inventario, Estudiantes, Préstamos e Incidentes ya
+consultan datos reales y muestran su estado vacío con icono; Panel, Devoluciones,
+Reportes, Respaldo y Configuración son provisionales y avisan de su etapa. La
+**corrección visual de la Etapa 5 está finalizada**: tema en claro generado desde
+tokens con contraste WCAG, barra lateral blanca con filas de 40 px e iconografía SVG
+local (elemento activo azul con texto blanco, estados hover y focus), y ficha de
+detalle que solo aparece al seleccionar una fila y se cierra con su botón ×. La
+suite `pytest` cubre las cinco etapas (**355 pruebas**) y `ruff` no reporta
+hallazgos. **Todavía no hay ejecutable empaquetado.**
 
 Las dos decisiones que quedaban abiertas **ya no bloquean nada**, porque el diseño
 admite los dos casos a la vez en lugar de elegir uno:

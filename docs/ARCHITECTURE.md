@@ -238,6 +238,20 @@ transacción, comparten lógica por `_comun`. `DashboardService`, `ReporteServic
   para la navegación principal: reduce la carga cognitiva y la memoria.
 - Los textos visibles están en español y fuera de la lógica.
 
+**Estado (Etapa 5):** implementado el armazón. `main_window.py` monta la ventana
+única (1360×840, mínimo 1024×640) con `sidebar.py` y un `QStackedWidget`
+(`objectName` `contenido`). `theme.py` genera el QSS desde los tokens de
+`UI_DESIGN.md` §3 y expone `aplicar_tema`. Los componentes base viven en
+`widgets/` (`primitives.py`, `feedback.py`, `inputs.py`, `table.py`) y en
+`dialogs/` (`confirm.py`). `pages/` contiene `base.py`, los listados conectados a
+datos reales (Inventario, Estudiantes, Préstamos, Incidentes) y las páginas
+provisionales (Panel, Devoluciones, Reportes, Respaldo, Configuración), que
+muestran un aviso de etapa pendiente y **no** inventan datos. La carga es síncrona
+en el hilo de la interfaz; el traslado a `QThreadPool` queda para una etapa
+posterior. `formatters.py` y `errors.py` completan la capa. Las contradicciones
+C-1…C-10 de `UI_DESIGN.md` §10 se resolvieron según las propuestas documentadas y
+quedan registradas para revisión del usuario.
+
 ### 3.5 `stocklend/core/` — Soporte transversal
 
 | Módulo | Responsabilidad |

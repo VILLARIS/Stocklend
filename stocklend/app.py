@@ -1,8 +1,7 @@
-"""Punto de entrada de la Etapa 1: configuración, logging y migración de la base.
+"""Punto de entrada: configuración, logging, migración y arranque del armazón.
 
-No contiene lógica de negocio (ni inventario, ni estudiantes, ni préstamos).
-La ventana es mínima y temporal, y existe para comprobar que la aplicación
-arranca contra una base real.
+No contiene lógica de negocio (ni inventario, ni estudiantes, ni préstamos). Desde
+la Etapa 5 abre la ventana única con barra lateral y páginas navegables.
 """
 
 from __future__ import annotations
@@ -11,15 +10,12 @@ import argparse
 import logging
 import sqlite3
 import sys
-from typing import TYPE_CHECKING
 
 from .core import paths
 from .core.constants import APP_NAME, APP_VERSION, SCHEMA_VERSION
+from .core.container import construir
 from .core.logging_setup import setup_logging
 from .data import database, migrator
-
-if TYPE_CHECKING:
-    from PySide6.QtWidgets import QWidget
 
 logger = logging.getLogger("stocklend.app")
 
@@ -45,33 +41,30 @@ def _resumen(conn: "sqlite3.Connection", aplicadas: list[int]) -> str:
     return texto
 
 
-def crear_ventana(resumen: str) -> "QWidget":
-    """Ventana mínima de arranque (temporal; las pantallas reales llegan en la Etapa 6)."""
-    from PySide6.QtWidgets import QLabel, QPushButton, QVBoxLayout, QWidget
-
-    ventana = QWidget()
-    ventana.setWindowTitle(APP_NAME)
-    etiqueta = QLabel(resumen)
-    etiqueta.setObjectName("resumen_arranque")
-    boton = QPushButton("Cerrar")
-    boton.clicked.connect(ventana.close)
-    disposicion = QVBoxLayout(ventana)
-    disposicion.addWidget(etiqueta)
-    disposicion.addWidget(boton)
-    return ventana
-
-
-def _abrir_ventana(resumen: str) -> int:
+def abrir_ventana(conn: sqlite3.Connection) -> int:
+    """Aplica el tema, compone los servicios y muestra la ventana principal."""
     try:
         from PySide6.QtWidgets import QApplication
     except ImportError:
         logger.exception("PySide6 no está disponible; no se puede abrir la ventana")
         print("PySide6 no está instalado; usa --check para verificar la base.", file=sys.stderr)
         return 1
+
+    from .ui.main_window import VentanaPrincipal
+    from .ui.theme import aplicar_tema
+
     app = QApplication.instance()
     if app is None:
         app = QApplication(sys.argv)
-    ventana = crear_ventana(resumen)
+    aplicar_tema(app)
+
+    servicios = construir(conn)
+    ventana = VentanaPrincipal(
+        servicios,
+        ruta_base=paths.db_path().name,
+        version=APP_VERSION,
+        esquema=database.user_version(conn),
+    )
     ventana.show()
     return app.exec()
 
@@ -100,7 +93,7 @@ def main(argv: list[str] | None = None) -> int:
         logger.info(estado)
         if args.check:
             return 0
-        return _abrir_ventana(estado)
+        return abrir_ventana(conn)
     finally:
         conn.close()
 

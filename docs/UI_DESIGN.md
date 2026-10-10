@@ -85,7 +85,7 @@ propia arquitectura declara (ver 3.2).
 | Rol | Token | Valor | Uso |
 |-----|-------|-------|-----|
 | Marca y acción | `azul_primario` | `#1E5AA8` | Botón primario, enlaces, elemento activo, anillo de foco |
-| Marca oscura | `azul_primario_oscuro` | `#153E75` | Fondo de la barra lateral, encabezado de ventana |
+| Marca oscura | `azul_primario_oscuro` | `#153E75` | Botón primario presionado; coincide con la marca de la barra lateral (`sidebar_marca`) |
 | Marca hover | `azul_primario_hover` | `#2861A5` | Estado presionado del botón primario (nuevo) |
 | Fondo de marca | `azul_claro` | `#E8F0FB` | Fondo de pastilla informativa, fila seleccionada |
 | Fondo de página | `fondo` | `#F5F7FA` | Fondo general de la zona de contenido |
@@ -103,23 +103,39 @@ propia arquitectura declara (ver 3.2).
 | Fondo de atención | `advertencia_claro` | `#FDF1E0` | Pastilla de «dañado» (nuevo) |
 | Estado de problema | `error` | `#B3261E` | «Faltante», errores, botón destructivo |
 | Fondo de problema | `error_claro` | `#FCEAE9` | Pastilla de «faltante», fondo de aviso inline (nuevo) |
-| Barra lateral | `sidebar_fg` | `#FFFFFF` | Texto e iconos de la barra lateral |
-| Barra lateral apagada | `sidebar_fg_apagado` | `#B9CCE6` | Texto secundario en la barra lateral (nuevo) |
-| Barra lateral activa | `sidebar_activo` | `#2E6FBF` | Fondo del elemento activo (nuevo) |
+| Fondo de la barra lateral | `sidebar_fondo` | `#FFFFFF` | Fondo de la barra lateral |
+| Borde de la barra lateral | `sidebar_borde` | `#E3E9F2` | Borde derecho de la barra lateral |
+| Texto de la barra lateral | `sidebar_texto` | `#26334A` | Texto e iconos de las entradas principales |
+| Texto de la barra lateral apagado | `sidebar_texto_apagado` | `#5A6672` | Texto e iconos de las entradas secundarias |
+| Hover de la barra lateral | `sidebar_hover` | `#EDF3FA` | Fondo al pasar el ratón o enfocar una entrada |
+| Fondo del elemento activo | `sidebar_activo_fondo` | `#1E5AA8` | Relleno azul completo de la entrada activa |
+| Texto del elemento activo | `sidebar_activo_texto` | `#FFFFFF` | Texto e iconos de la entrada activa |
+| Marca de la barra lateral | `sidebar_marca` | `#153E75` | Texto del nombre «StockLend» |
 | Foco | `foco` | `#1E5AA8` | Anillo de foco de teclado |
+
+> **Histórico (diseño oscuro, superado por la corrección visual de la Etapa 5):**
+> `sidebar_fg` (`#FFFFFF`, texto e iconos sobre barra oscura), `sidebar_fg_apagado`
+> (`#B9CCE6`, texto secundario) y `sidebar_activo` (`#2E6FBF`, fondo del elemento
+> activo). El diseño vigente se describe con los tokens de la tabla anterior, que
+> coinciden con los valores reales de `stocklend/ui/theme.py`.
 
 #### 3.2 Contraste verificado
 
 Los ratios se calcularon con la fórmula de luminancia relativa de WCAG 2.1 sobre los
-valores de la tabla anterior. Resultado: **24 de 24 combinaciones cumplen**. Las más
-delicadas, que son las que hay que vigilar al maquetar:
+valores de la tabla anterior. Resultado: **todas las combinaciones de la tabla
+cumplen**. Las más delicadas, que son las que hay que vigilar al maquetar:
 
 | Combinación | Ratio | Mínimo | Nota |
 |-------------|-------|--------|------|
 | Texto principal sobre superficie | 15.65:1 | 4.5 | holgado |
 | Texto secundario sobre superficie | 5.87:1 | 4.5 | justo, no bajar el color |
 | Texto secundario sobre fila con el cursor encima (`hover_fila`) | 5.22:1 | 4.5 | el resaltado no puede aclarar mucho el texto |
-| Texto de la barra lateral, elemento activo | 5.07:1 | 4.5 | el activo es el de menor margen |
+| Texto de la barra lateral, entrada inactiva sobre blanco | 12.69:1 | 4.5 | |
+| Texto de la barra lateral, entrada secundaria sobre blanco | 5.87:1 | 4.5 | justo, no bajar el color |
+| Texto de la barra lateral, elemento activo (blanco sobre azul) | 6.81:1 | 4.5 | |
+| Texto de la barra lateral inactivo sobre `sidebar_hover` | 11.36:1 | 4.5 | estado hover |
+| Elemento activo con ratón encima (blanco sobre `azul_primario_hover`) | 5.68:1 | 4.5 | activo en hover/foco |
+| Marca «StockLend» sobre blanco | 10.62:1 | 4.5 | |
 | Pastilla «dañado» (texto sobre fondo ámbar) | 4.94:1 | 4.5 | ver aviso siguiente |
 | Pastilla «pendiente» neutra | 4.90:1 | 4.5 | |
 | Borde de campo de formulario | 3.36:1 | 3.0 | WCAG 1.4.11, controles no textuales |
@@ -148,7 +164,8 @@ exige en un control que hay que poder identificar. Por eso `borde_fuerte`
 - **El fondo de página nunca es blanco puro.** El blanco se reserva para las
   superficies con relieve, para que las tarjetas se lean como elevadas sin sombra
   fuerte.
-- **Sin gradientes.** Salvo la barra lateral, que usa un azul sólido.
+- **Sin gradientes.** La barra lateral es de fondo blanco y el elemento activo usa un
+  azul sólido.
 
 ### 3.4 Tipografía
 
@@ -203,7 +220,7 @@ que las filas se lean alineadas):
 | Campo de formulario | 36 px |
 | Campo de búsqueda en la barra de herramientas | 36 px |
 | Selector incremental de cantidad | 36 px |
-| Fila de la barra lateral | 44 px |
+| Fila de la barra lateral | 40 px |
 | Fila de tabla | 40 px |
 | Cabecera de tabla | 40 px |
 | Pastilla de estado | 24 px |
@@ -224,10 +241,14 @@ reconoce porque es blanca sobre un fondo gris claro, no porque «flote».
 
 ### 3.7 Iconografía
 
-- **Estilo:** línea (contorno) de 1.5 px, esquinas redondeadas, retícula de 24 px.
+- **Estilo:** línea (contorno) de 1.8 px, esquinas redondeadas, retícula de 24 px.
   Sin iconos rellenos ni con degradados.
-- **Tamaños:** 20 px en la barra lateral y en botones, 16 px dentro de tablas y
-  pastillas.
+- **Origen:** plantillas SVG propias, embebidas en `stocklend/ui/icons.py` y
+  renderizadas en tiempo de ejecución; sin fuentes de iconos externas ni paquetes de
+  terceros. El color se inyecta por plantilla (`{color}`) aplicando los tokens.
+- **Tamaños:** 18 px en la barra lateral, 52 px (máx. 56 px de componente) en los
+  iconos de los estados vacíos. El resto de tamaños (botones, tablas, pastillas) se
+  fija en las pantallas de operación de la Etapa 6.
 - **Consistencia:** un icono, un significado, en toda la aplicación. El mismo icono
   nunca representa dos cosas.
 - **Regla de la tabla:** dentro de una tabla densa, el icono solo aparece si acompaña
@@ -302,7 +323,7 @@ en la sección 2).
 | **Barra lateral** | Marca, secciones, secciones secundarias | Ancho fijo de 240 px. No se redimensiona. Es la única columna fija de la ventana |
 | **Cabecera de contenido** | Título de sección, subtítulo, acción principal de la sección | Fija al desplazarse el contenido; la acción principal siempre a la derecha |
 | **Zona de trabajo** | Lo que hace la sección | Flexible. Ocupa todo el ancho restante |
-| **Zona de apoyo** | Detalle del elemento seleccionado, totales, ayuda de la tarea | Fija en 320–360 px. **Oculta por debajo de 1200 px de ancho**; su contenido pasa a un diálogo |
+| **Zona de apoyo** | Detalle del elemento seleccionado | 300–340 px. **Solo visible con una fila seleccionada** (no hay panel vacío permanente) y se cierra con su botón × (`DetailPanel`) |
 | **Barra de estado** | Ruta de la base, último respaldo, estado de la operación | 24 px. Solo texto informativo, nunca acciones |
 
 La zona de apoyo existe para que Sonia vea el contexto de lo que tiene seleccionado
@@ -313,9 +334,9 @@ para entender y una que muestra la información a la vez.
 
 | Ancho de ventana | Comportamiento |
 |------------------|----------------|
-| ≥ 1440 px | Zona de trabajo y zona de apoyo. Las tablas muestran todas sus columnas |
+| ≥ 1440 px | Zona de trabajo con todas las columnas; el detalle aparece al seleccionar una fila |
 | 1200–1439 px | Igual, con menos columnas en tabla: se ocultan las menos usadas, nunca el nombre ni las cantidades |
-| 1024–1199 px | **La zona de apoyo se oculta.** Las tablas muestran nombre, estado y cantidades; el resto pasa a la ficha de detalle |
+| 1024–1199 px | Zona de trabajo a todo el ancho; el detalle aparece solo al seleccionar una fila. Las tablas muestran nombre, estado y cantidades; el resto pasa a la ficha de detalle (Etapa 6) |
 | < 1024 px | No soportado. Se muestra un aviso pidiendo ampliar la ventana |
 
 | Alto de ventana | Comportamiento |
@@ -395,17 +416,23 @@ como insignia; si no hay nada pendiente, no hay insignia.
 
 ### 5.2 Estados de una entrada
 
-| Estado | Fondo | Texto | Indicator |
-|--------|-------|-------|-----------|
-| Reposo | Transparente | `sidebar_fg` | — |
-| Ratón encima | `azul_primario_hover` al 20 % | `sidebar_fg` | — |
-| **Activa** | `sidebar_activo` | `sidebar_fg` | Barra vertical blanca de 3 px en el borde izquierdo |
-| Foco de teclado | Translúcido del color de foco | `sidebar_fg` | Contorno visible de 2 px |
-| Deshabilitada | Transparente | `sidebar_fg_apagado` al 60 % | Sin insignia |
+| Estado | Fondo | Texto e icono | Indicador |
+|--------|-------|---------------|-----------|
+| Reposo | Transparente | `sidebar_texto` | — |
+| Ratón encima | `sidebar_hover` | `sidebar_texto` | — |
+| Foco de teclado | `sidebar_hover` | `sidebar_texto` | — |
+| **Activa** | `sidebar_activo_fondo` | `sidebar_activo_texto` | Relleno azul completo, texto en peso 600 |
+| Activa con ratón encima o foco | `azul_primario_hover` | `sidebar_activo_texto` | — |
+| Entrada secundaria (no activa) | Transparente | `sidebar_texto_apagado` | Sin insignia |
 
-La sección activa se identifica por **tres** señales a la vez: el fondo, la barra
-lateral izquierda y el título grande de la cabecera de contenido. Con solo una de
-ellas no bastaría.
+La sección activa se identifica por **tres** señales a la vez: el relleno azul
+completo, el texto y el icono en blanco con peso 600, y el título de la cabecera de
+contenido. Con solo una de ellas no bastaría. La barra vertical blanca de 3 px del
+diseño oscuro anterior se retiró: el relleno azul **es** el indicador.
+
+Los valores de tonos, medidas y estados de esta sección coinciden con
+`stocklend/ui/theme.py` y `stocklend/ui/sidebar.py`; si cambian, se actualiza primero
+el código y luego este documento.
 
 ### 5.3 Atajos globales
 
