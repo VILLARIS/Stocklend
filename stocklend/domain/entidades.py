@@ -164,3 +164,17 @@ class Configuracion:
     clave: str
     valor: str
     actualizado_en: str
+
+
+@dataclass(frozen=True, slots=True)
+class ResumenInventario:
+    """Agregados del inventario para las tarjetas de la pantalla (RF-INV-05).
+
+    Es un modelo de lectura calculado en una sola consulta; no corresponde a
+    ninguna tabla y no altera el esquema.
+    """
+
+    articulos: int
+    unidades_total: int
+    disponibles: int
+    prestadas: int

@@ -12,8 +12,8 @@ artículo y de cada estudiante quede guardado de forma confiable.
 > Existen la base de datos con sus migraciones (Etapa 1), el dominio con sus
 > repositorios (Etapa 2), los servicios de inventario, unidades y estudiantes
 > (Etapa 3), los servicios de préstamos, devoluciones e incidentes (Etapa 4), el
-> armazón visual con PySide6 (Etapa 5) y las pantallas de operación (Etapa 6), con
-> pruebas automatizadas en verde.
+> armazón visual con PySide6 (Etapa 5), las pantallas de operación (Etapa 6) y el
+> rediseño de Inventario (Etapa 6.5), con pruebas automatizadas en verde.
 > **Todavía no hay ejecutable empaquetado.**
 >
 > El diseño de interfaz está escrito como propuesta en los cuatro documentos
@@ -162,6 +162,7 @@ StockLend/
 | 4 | Servicios de préstamos, devoluciones e incidentes *(implementada)* |
 | 5 | Armazón de la interfaz: navegación y tema *(implementada, con la corrección visual finalizada)* |
 | 6 | Pantallas de operación *(implementada)* |
+| 6.5 | Rediseño de la pantalla de Inventario *(implementada)* |
 | 7 | Panel, reportes y exportaciones |
 | 8 | Copias de seguridad y restauración |
 | 9 | Empaquetado en Windows |
@@ -197,8 +198,13 @@ La **corrección visual de la Etapa 5 está finalizada**: tema en claro generado
 tokens con contraste WCAG, barra lateral blanca con filas de 40 px e iconografía SVG
 local (elemento activo azul con texto blanco, estados hover y focus), y ficha de
 detalle que solo aparece al seleccionar una fila y se cierra con su botón ×. La
-suite `pytest` cubre las seis etapas (**391 pruebas**) y `ruff` no reporta
-hallazgos. **Todavía no hay ejecutable empaquetado.**
+**Etapa 6.5** rediseña solo la pantalla de Inventario: fila de cuatro tarjetas con
+cifras reales de un agregado SQL (`ResumenInventario`), contenedor principal con
+pestañas compactas con icono, buscador y filtro, y tabla de artículos con columna
+`Estado` (`Prestable` / `No prestable`) y columna `Acciones` (`⋯`) que reutiliza el
+menú de fila. No cambia la barra lateral, el esquema ni las reglas de negocio. La
+suite `pytest` cubre las etapas (**402 pruebas**) y `ruff` no reporta hallazgos.
+**Todavía no hay ejecutable empaquetado.**
 
 Las dos decisiones que quedaban abiertas **ya no bloquean nada**, porque el diseño
 admite los dos casos a la vez en lugar de elegir uno:

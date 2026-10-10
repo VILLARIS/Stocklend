@@ -190,3 +190,34 @@ def test_buscar_y_listar_articulos(servicios):
     assert [a.nombre for a in servicios.inventario.buscar_articulos("maz")] == ["Mazo"]
     assert servicios.inventario.buscar_articulos("Utensilios")  # por categoría
     assert len(servicios.inventario.listar_articulos()) == 2
+
+
+def test_resumen_inventario_base_vacia(servicios):
+    resumen = servicios.inventario.resumen()
+    assert (resumen.articulos, resumen.unidades_total) == (0, 0)
+    assert (resumen.disponibles, resumen.prestadas) == (0, 0)
+
+
+def test_resumen_inventario_agrega_contadores_reales(servicios):
+    categoria = _categoria(servicios)
+    servicios.inventario.registrar_articulo("Olla", categoria.id, cantidad_inicial=5)
+    servicios.inventario.registrar_articulo("Sartén", categoria.id, cantidad_inicial=3)
+    resumen = servicios.inventario.resumen()
+    assert resumen.articulos == 2
+    assert resumen.unidades_total == 8
+    assert resumen.disponibles == 8
+    assert resumen.prestadas == 0
+
+
+def test_resumen_inventario_refleja_movimientos(servicios):
+    categoria = _categoria(servicios)
+    articulo = servicios.inventario.registrar_articulo(
+        "Cinta", categoria.id, cantidad_inicial=4
+    )
+    servicios.inventario.aplicar_movimiento(
+        articulo.id, TipoMovimiento.PRESTAMO, 2, "Préstamo de prueba"
+    )
+    resumen = servicios.inventario.resumen()
+    assert resumen.unidades_total == 4
+    assert resumen.disponibles == 2
+    assert resumen.prestadas == 2

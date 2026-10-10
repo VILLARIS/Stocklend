@@ -270,6 +270,16 @@ convertir el Panel en un tablero de publicidad, y por eso tiene reglas duras.
 |----|-------|
 | `QFrame` con `QLabel` × 3 dentro de un `QVBoxLayout` | Con `setObjectName` propio para el test de contraste y de tamaño |
 
+**Icono opcional (Etapa 6.5).** El constructor acepta un `icono: QPixmap` opcional que
+se coloca alineado arriba a la derecha de la cifra (objectName `icono_estadistica`).
+Debe ser decorativo: la cifra y la etiqueta se leen sin él. Se usa en la fila de
+tarjetas de Inventario.
+
+**`FilaEstadisticas` (Etapa 6.5).** Contenedor de tarjetas que las reflowa según el
+ancho disponible: 4 columnas a partir de 820 px, 2 a partir de 420 px y 1 por debajo.
+Así la fila de Inventario pasa a dos filas en pantallas pequeñas sin encoger las
+cifras hasta hacerlas ilegibles. (`widgets/feedback.py`.)
+
 ### 3.2 `DataTable`
 
 El componente central de la aplicación. Ocho de las diez pantallas son, en el fondo,
@@ -381,7 +391,8 @@ portador de información».
 | Correcto | Disponible, Devuelto, Cerrado, Resuelto, Sin incidencias | `exito` sobre `exito_claro` | `exito_claro` | Inventario, Devoluciones, Préstamos, Incidentes |
 | Atención | Dañado, Dañada, Pendiente de devolución, Sin determinar | `advertencia_texto` sobre `advertencia_claro` | `advertencia_claro` | Inventario, Incidentes, Panel |
 | Problema | Faltante, Perdido, Perdida, Anulado, Error | `error` sobre `error_claro` | `error_claro` | Inventario, Devoluciones, Préstamos |
-| Neutro | Activo, Cerrado, En buen estado | `texto_secundario` sobre `borde_suave` | `borde_suave` | Préstamos, Reportes |
+| Neutro | Activo, Cerrado, En buen estado, **No prestable** | `texto_secundario` sobre `borde_suave` | `borde_suave` | Préstamos, Reportes, Inventario |
+| Éxito (disponibilidad) | **Prestable** | `exito` sobre `exito_claro` | `exito_claro` | Inventario (columna Estado) |
 | Informativo | Con control individual, Procedencia: depósito | `azul_primario` sobre `azul_claro` | `azul_claro` | Inventario, Incidentes |
 
 **El texto de la columna «Estado» de Préstamos** usa el grupo neutro para «Activo» y
@@ -401,6 +412,13 @@ técnico, pero sí es un estado que hay que notar.
 | Qt | Notas |
 |----|-------|
 | `QStyledItemDelegate` | El delegate dibuja el rectángulo redondeado y pinta el texto centrado. Es más ligero que un widget por celda, y `QTableWidget` con widgets se rompe en cuanto hay 500 filas |
+
+**`AccionesCellDelegate` (Etapa 6.5).** Delegate de la última columna de la tabla de
+Inventario: pinta el glifo `⋯` centrado en `azul_primario` y resalta el fondo cuando la
+fila está bajo el cursor o seleccionada. La celda no edita nada: al pulsarla, la página
+abre el mismo menú de fila que el clic derecho (`RowMenu`), de modo que todas las
+acciones siguen pasando por un único sitio. El texto `⋯` vive en el modelo, para que la
+exportación lo reciba igual.
 
 ### 3.5 `KeyValueList`
 

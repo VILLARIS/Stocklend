@@ -178,32 +178,38 @@ RF-INV-08, RF-INV-09, RF-INV-10, RF-INV-11.
 
 ### 3.3 Estructura
 
+Desde el rediseño de la Etapa 6.5, la pantalla abre con una **fila de cuatro tarjetas**
+con cifras reales (agregado SQL, no de ejemplo) y agrupa pestañas, buscador, filtro y
+tabla dentro de un único contenedor:
+
 ```
 ┌───────────────────────────────────────────────────────────────────────────────────┐
 │  Inventario                                                                      │
 │  Artículos, unidades y existencias                                              │
 ├───────────────────────────────────────────────────────────────────────────────────┤
-│ [ Buscar por nombre o código…            ]  Categoría [ Todas ▾ ]  [ + Artículo ]│
-├───────────────────────────────────────────────────────────────────────────────────┤
-│  Artículos  │  Unidades  │  Categorías                                          │  ← pestañas
-├───────────────────────────────────────────────────────────────────────────────────┤
-│ ┌───────────────────────────────────────────────────────┐  ┌──────────────────┐  │
-│ │ ▸▨ Olla grande              Utensilios · Ollas   (n)  │  │  Olla grande     │  │
-│ │    10 total · 8 disponible · 1 prestado · 1 dañada  │  │  ──────────────  │  │
-│ │                                                  · 0 │  │  Control por      │  │
-│ │ ▨ Ollera mediana           Utensilios · Ollas   (n)  │  │  unidad: activo   │  │
-│ │    6 total · 6 disponible · 0 prestado · 0 dañada   │  │                  │  │
-│ │                                                  · 0 │  │  10 unidades      │  │
-│ │ ▨ Olla pequeña             Utensilios · Ollas   (n)  │  │   8 disponibles   │  │
-│ │    8 total · 4 disponible · 4 prestado · 0 dañada   │  │   1 prestada     │  │
-│ │                                                  · 0 │  │   1 dañada        │  │
-│ │                                                     │  │                  │  │
-│ │                                                     │  │  [ Registrar      │  │
-│ │                                                     │  │    incidencia ]   │  │
-│ └───────────────────────────────────────────────────────┘  └──────────────────┘  │
-│  6 artículos                                              (zona de apoyo)      │
+│ ┌── Artículos ──┐ ┌── Unidades ───┐ ┌── Disponibles ┐ ┌── Prestadas ──┐           │  ← 4 StatCard
+│ │     6    ▨    │ │    42    ▨    │ │    38    ✓    │ │    4    ▨     │           │  (refluye a 2/1)
+│ │  registrados  │ │ en existencia │ │ listas para…  │ │ fuera con…    │           │
+│ └───────────────┘ └───────────────┘ └───────────────┘ └───────────────┘           │
+│ ┌─────────────────────────────────────────────────────────────────────────────────┐│
+│ │ Artículos │ Unidades │ Categorías                                              ││  ← pestañas (izq.)
+│ ├─────────────────────────────────────────────────────────────────────────────────┤│
+│ │ [ Buscar por nombre o código…        ]  Categoría [ Todas ▾ ]                   ││  ← filtros
+│ ├──────────┬────────┬────────────┬─────┬─────┬─────┬─────┬─────┬───────────┬─────┤│
+│ │ Nombre   │ Código │ Categoría  │Disp │Prest│Dañ  │Falt │Total│ Estado    │  ⋯  ││
+│ │ Olla     │ OLL-01 │ Utensilios │  8  │  1  │  1  │  0  │  10 │[Prestable]│  ⋯  ││
+│ │ Llave    │   —    │ Herramienta│  3  │  0  │  0  │  0  │   3 │[No prest.]│  ⋯  ││
+│ └──────────┴────────┴────────────┴─────┴─────┴─────┴─────┴─────┴───────────┴─────┘│
+│                                              (detalle lateral al seleccionar)     │
+│  6 artículos                                                                     │
+│ └─────────────────────────────────────────────────────────────────────────────────┘│
 └───────────────────────────────────────────────────────────────────────────────────┘
 ```
+
+El contenedor principal (`QFrame#contenedor_inventario`) lleva las pestañas **alineadas
+a la izquierda** (icono + etiqueta, subrayado azul en la activa), la fila de filtros y
+el área de tabla + detalle. La acción `+ Artículo` de la cabecera y el campo de nueva
+categoría aparecen **solo en la pestaña que les corresponde**.
 
 ### 3.4 Las tres pestañas
 
@@ -219,19 +225,31 @@ en la navegación principal con las tareas del día. Ver [sección 11](#11-categ
 
 ### 3.5 Pestaña Artículos: columnas
 
+La tabla es una sola y compartida con las tres pestañas; la pestaña activa decide las
+columnas, los delegates y el estado vacío. Para Artículos son diez:
+
 | Columna | Contenido | Ancho | Notas |
 |---------|-----------|-------|-------|
-| Nombre | Nombre del artículo | Flexible | Único nombre en negrita, línea 1 |
-| Código | Código interno | 110 px | Se genera solo. No se pide (RF-INV-01) |
-| Categoría | Categoría asignada | 160 px | Con color de etiqueta neutro, no semántico |
-| Control por unidad | Sí / No | 130 px | Solo si algún artículo lo usa; si ninguno lo usa, la columna se oculta |
-| Disponible | Cantidad | 90 px | Cifra tabular, verde si es mayor que 0 |
-| Prestado | Cantidad | 90 px | Cifra tabular |
+| Nombre | Nombre del artículo | Flexible (stretch) | Columna que absorbe el ancho sobrante |
+| Código | Código interno | 120 px | Se genera solo. No se pide (RF-INV-01); «—» si no tiene |
+| Categoría | Categoría asignada | 150 px | Etiqueta neutra, no semántica |
+| Disponible | Cantidad | 100 px | Cifra tabular (`QuantityCell`), verde si es mayor que 0 |
+| Prestado | Cantidad | 100 px | Cifra tabular |
 | Dañado | Cantidad | 90 px | Cifra tabular, ámbar si es mayor que 0 |
 | Faltante | Cantidad | 90 px | Cifra tabular, rojo si es mayor que 0 |
-| Total | Suma de las cuatro | 80 px | Cifra tabular en semibold. **Suma siempre, sin excepción** (RF-INV-05) |
-| No prestable | Sí / No | 110 px | RF-INV-09. Si es «Sí», la pastilla de disponible se atenúa |
-| ⋯ | Menú de fila | 44 px | Editar, ajustar cantidad, registrar incidencia, dar de baja |
+| Total | Suma de las cuatro | 90 px | Cifra tabular en semibold. **Suma siempre, sin excepción** (RF-INV-05) |
+| Estado | Prestable / No prestable | 130 px | Pastilla (`StatusChip`); «No prestable» se pinta en neutro (RF-INV-09) |
+| Acciones | ⋯ | 48 px | `AccionesCellDelegate`: situado en la última columna, abre el menú de fila |
+
+**El control por unidad no es una columna.** Se consulta en la pestaña Unidades, que
+solo tiene contenido cuando algún artículo lo activa (RF-INV-08, RF-INV-10). La
+columna `Acciones` (`⋯`) reutiliza el menú de fila: editar, ajustar existencias (solo
+si el artículo no tiene control individual), ver unidades (solo si lo tiene) y
+registrar incidente.
+
+**Las cuatro cantidades se muestran siempre, aunque sean cero.** No se ocultan
+las columnas vacías: si «dañado» desaparece cuando no hay nada dañado, Sonia no
+puede saber si el filtro está mal o si de verdad no hay. El cero es información.
 
 **Las cuatro cantidades se muestran siempre, aunque sean cero.** No se ocultan
 las columnas vacías: si «dañado» desaparece cuando no hay nada dañado, Sonia no
@@ -243,6 +261,12 @@ coincidir, la fila lo marcaría en rojo. Hoy siempre coincide, y por eso el
 comportamiento está especificado de todas formas.
 
 ### 3.6 Fila de artículo: dos niveles
+
+> **Nota (Etapa 6.5):** el rediseño materializa el detalle por unidad a través de la
+> pestaña **Unidades** y del panel de detalle lateral (al seleccionar una fila), no
+> mediante filas expandidas dentro de la tabla. La acción «Ver unidades» del menú de
+> fila cambia a la pestaña Unidades con el nombre del artículo como término de
+> búsqueda. El diseño de dos niveles descrito a continuación queda como referencia.
 
 Una fila ocupa hasta 40 px si el artículo no tiene control individual, y hasta 72 px
 si lo tiene. El segundo nivel existe porque el control por unidad cambia lo que

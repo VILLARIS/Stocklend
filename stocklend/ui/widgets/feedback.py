@@ -6,6 +6,7 @@ from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
     QFrame,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -189,24 +190,38 @@ class StatCard(QFrame):
         etiqueta: str,
         valor: str = "0",
         apoyo: str = "",
+        icono: QPixmap | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
         self.setObjectName("tarjeta_estadistica")
         self.setProperty("tarjeta", True)
         self.setFixedHeight(132)
+        self.setMinimumWidth(180)
         self.valor = QLabel(valor)
         self.valor.setObjectName("dato_destacado")
+        self.icono = QLabel()
+        self.icono.setObjectName("icono_estadistica")
+        if icono is not None:
+            self.icono.setPixmap(icono)
+        self.icono.setVisible(icono is not None and not icono.isNull())
         self.etiqueta = QLabel(etiqueta)
         self.etiqueta.setProperty("campo", "etiqueta")
         self.apoyo = QLabel(apoyo)
         self.apoyo.setProperty("campo", "etiqueta")
         self.apoyo.setWordWrap(True)
 
+        cabecera = QHBoxLayout()
+        cabecera.setContentsMargins(0, 0, 0, 0)
+        cabecera.setSpacing(8)
+        cabecera.addWidget(self.valor)
+        cabecera.addStretch(1)
+        cabecera.addWidget(self.icono, 0, Qt.AlignmentFlag.AlignTop)
+
         disposicion = QVBoxLayout(self)
         disposicion.setContentsMargins(20, 20, 20, 20)
         disposicion.setSpacing(4)
-        disposicion.addWidget(self.valor)
+        disposicion.addLayout(cabecera)
         disposicion.addWidget(self.etiqueta)
         disposicion.addWidget(self.apoyo)
         disposicion.addStretch(1)
@@ -219,6 +234,59 @@ class StatCard(QFrame):
             self.etiqueta.setText(etiqueta)
         if apoyo is not None:
             self.apoyo.setText(apoyo)
+
+
+class FilaEstadisticas(QWidget):
+    """Fila de `StatCard` que se reorganiza sola al cambiar el ancho.
+
+    En pantallas anchas usa cuatro columnas; en pantallas estrechas baja a dos
+    (o a una) para que las cifras sigan legibles sin recortarse.
+    """
+
+    def __init__(self, tarjetas: list[StatCard], parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setObjectName("fila_estadisticas")
+        self._tarjetas = list(tarjetas)
+        self._columnas = 0
+        self._rejilla = QGridLayout(self)
+        self._rejilla.setContentsMargins(0, 0, 0, 0)
+        self._rejilla.setHorizontalSpacing(16)
+        self._rejilla.setVerticalSpacing(16)
+        self._reorganizar(4)
+
+    def _calcular_columnas(self, ancho: int) -> int:
+        if ancho >= 820 or ancho <= 0:
+            return 4
+        if ancho >= 420:
+            return 2
+        return 1
+
+    def _reorganizar(self, columnas: int) -> None:
+        columnas = max(1, min(4, columnas))
+        if columnas != self._columnas:
+            self._columnas = columnas
+            while self._rejilla.count():
+                self._rejilla.takeAt(0)
+            for columna in range(4):
+                self._rejilla.setColumnStretch(columna, 1 if columna < columnas else 0)
+            for posicion, tarjeta in enumerate(self._tarjetas):
+                self._rejilla.addWidget(
+                    tarjeta, posicion // columnas, posicion % columnas
+                )
+        self._ajustar_alturas()
+
+    def _ajustar_alturas(self) -> None:
+        """Ajusta la altura de cada tarjeta a la proporción de su ancho (cover)."""
+        columnas = max(1, self._columnas)
+        espacios = self._rejilla.horizontalSpacing() * (columnas - 1)
+        ancho = max(1, (self.width() - espacios) // columnas)
+        for tarjeta in self._tarjetas:
+            if tarjeta.hasHeightForWidth():
+                tarjeta.setFixedHeight(tarjeta.heightForWidth(ancho))
+
+    def resizeEvent(self, evento) -> None:  # noqa: N802
+        super().resizeEvent(evento)
+        self._reorganizar(self._calcular_columnas(self.width()))
 
 
 class DetailPanel(QFrame):

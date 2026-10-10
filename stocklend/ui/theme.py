@@ -34,6 +34,7 @@ class Colores:
     borde_suave: str = "#EEF1F6"
     borde: str = "#E1E7EF"
     borde_fuerte: str = "#828D9E"
+    cabecera_tabla: str = "#EFF3F9"
     texto: str = "#232F3F"
     texto_secundario: str = "#5A6672"
     exito: str = "#1E7B45"
@@ -346,6 +347,134 @@ QHeaderView::section {{
     min-height: {m.alto_cabecera_tabla}px;
 }}
 
+/* ---------------------------------------------------------------- inventario */
+QLabel#dato_destacado {{
+    font-size: {t.dato_destacado}px;
+    font-weight: 600;
+}}
+QLabel#icono_estadistica {{
+    max-width: 30px;
+    max-height: 30px;
+}}
+QFrame#contenedor_inventario {{
+    background-color: {c.superficie};
+    border: 1px solid {c.borde};
+    border-radius: {m.radio_l}px;
+}}
+QFrame#separador_inventario {{
+    background-color: {c.borde_suave};
+    border: none;
+    max-height: 1px;
+}}
+
+/* pestañas compactas del bloque de trabajo */
+QTabBar#pestanas_inventario {{
+    background-color: transparent;
+    padding: 6px 10px 0 10px;
+}}
+QTabBar#pestanas_inventario::tab {{
+    background-color: transparent;
+    color: {c.texto_secundario};
+    border: none;
+    border-radius: {m.radio_m}px;
+    padding: 0 14px;
+    margin: 0 2px 6px 2px;
+    min-height: 34px;
+    font-size: {t.cuerpo}px;
+}}
+QTabBar#pestanas_inventario::tab:hover {{
+    color: {c.texto};
+    background-color: {c.hover_fila};
+}}
+QTabBar#pestanas_inventario::tab:selected {{
+    color: {c.azul_primario};
+    font-weight: 600;
+    background-color: {c.azul_claro};
+}}
+
+/* buscador y filtro de categoría */
+#filtro_inventario QLineEdit,
+#filtro_inventario QComboBox {{
+    background-color: {c.fondo};
+    border: 1px solid {c.borde};
+    border-radius: {m.radio_m}px;
+    min-height: {m.alto_campo}px;
+    padding: 0 12px;
+}}
+#filtro_inventario QLineEdit:focus,
+#filtro_inventario QComboBox:focus,
+#filtro_inventario QComboBox:on {{
+    border: 1px solid {c.foco};
+    background-color: {c.superficie};
+}}
+#filtro_categoria::drop-down {{
+    border: none;
+    width: 26px;
+}}
+#filtro_categoria::down-arrow {{
+    image: none;
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid {c.texto_secundario};
+    margin-right: 10px;
+}}
+QComboBox QAbstractItemView {{
+    border: 1px solid {c.borde};
+    border-radius: {m.radio_m}px;
+    background-color: {c.superficie};
+    selection-background-color: {c.azul_claro};
+    selection-color: {c.texto};
+    outline: none;
+    padding: 4px;
+}}
+
+/* tabla del inventario */
+QTableView#tabla_inventario {{
+    background-color: {c.superficie};
+    border: none;
+    border-radius: 0;
+    selection-background-color: {c.azul_claro};
+    selection-color: {c.texto};
+    outline: none;
+    gridline-color: transparent;
+}}
+QTableView#tabla_inventario::item {{
+    padding: 0 12px;
+    border-bottom: 1px solid {c.borde_suave};
+}}
+QTableView#tabla_inventario::item:hover {{
+    background-color: {c.hover_fila};
+}}
+QTableView#tabla_inventario::item:selected {{
+    background-color: {c.azul_claro};
+    color: {c.texto};
+}}
+QHeaderView#cabecera_inventario {{
+    background-color: transparent;
+}}
+QHeaderView#cabecera_inventario::section {{
+    background-color: {c.cabecera_tabla};
+    color: {c.texto};
+    font-weight: 600;
+    font-size: {t.secundario}px;
+    border: none;
+    border-bottom: 1px solid {c.borde};
+    border-right: 1px solid {c.borde_suave};
+    padding: 0 12px;
+    min-height: 44px;
+}}
+QHeaderView#cabecera_inventario::section:last {{
+    border-right: none;
+}}
+
+/* pie del contenedor */
+#texto_pie {{
+    color: {c.texto_secundario};
+    font-size: {t.secundario}px;
+}}
+
 /* -------------------------------------------------------------- tarjetas y paneles */
 QFrame[tarjeta="true"] {{
     background-color: {c.superficie};
@@ -464,6 +593,19 @@ QScrollBar::handle:vertical {{
 QScrollBar::handle:vertical:hover {{ background: {c.texto_secundario}; }}
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0; }}
 QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{ background: transparent; }}
+QScrollBar:horizontal {{
+    background: transparent;
+    height: 12px;
+    margin: 2px;
+}}
+QScrollBar::handle:horizontal {{
+    background: {c.borde_fuerte};
+    border-radius: 5px;
+    min-width: 24px;
+}}
+QScrollBar::handle:horizontal:hover {{ background: {c.texto_secundario}; }}
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{ width: 0; }}
+QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {{ background: transparent; }}
 """.strip()
 
 

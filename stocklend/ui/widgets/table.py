@@ -9,12 +9,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt, Signal
-from PySide6.QtGui import QColor, QFont
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, QRect, Qt, Signal
+from PySide6.QtGui import QColor, QFont, QPalette, QPen
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QHeaderView,
     QStackedWidget,
+    QStyle,
     QStyledItemDelegate,
     QTableView,
     QVBoxLayout,
@@ -33,6 +34,8 @@ def _estilos_estado() -> dict[str, tuple[str, str]]:
         "Devuelto": (_COL.exito_claro, _COL.exito),
         "Resuelto": (_COL.exito_claro, _COL.exito),
         "Sin incidencias": (_COL.exito_claro, _COL.exito),
+        "Prestable": (_COL.exito_claro, _COL.exito),
+        "No prestable": (_COL.borde_suave, _COL.texto_secundario),
         "Dañado": (_COL.advertencia_claro, _COL.advertencia_texto),
         "Dañada": (_COL.advertencia_claro, _COL.advertencia_texto),
         "Daño": (_COL.advertencia_claro, _COL.advertencia_texto),
@@ -65,6 +68,7 @@ class TablaModelo(QAbstractTableModel):
         super().__init__(parent)
         self._columnas = list(columnas)
         self._filas: list[list[Any]] = []
+        self._columnas_derecha: set[int] = set()
 
     def set_filas(self, filas: list[list[Any]]) -> None:
         self.beginResetModel()
@@ -76,6 +80,10 @@ class TablaModelo(QAbstractTableModel):
         self._columnas = list(columnas)
         self._filas = []
         self.endResetModel()
+
+    def set_columnas_derecha(self, indices: list[int]) -> None:
+        """Marca columnas cuyo encabezado se alinea a la derecha (cifras)."""
+        self._columnas_derecha = set(indices)
 
     def fila(self, indice: int) -> list[Any]:
         return self._filas[indice]
@@ -96,9 +104,30 @@ class TablaModelo(QAbstractTableModel):
     def headerData(  # noqa: N802
         self, seccion: int, orientacion: Qt.Orientation, rol: int = Qt.ItemDataRole.DisplayRole
     ):
-        if orientacion == Qt.Orientation.Horizontal and rol == Qt.ItemDataRole.DisplayRole:
-            return self._columnas[seccion]
+        if orientacion == Qt.Orientation.Horizontal:
+            if rol == Qt.ItemDataRole.DisplayRole:
+                return self._columnas[seccion]
+            if (
+                rol == Qt.ItemDataRole.TextAlignmentRole
+                and seccion in self._columnas_derecha
+            ):
+                return int(
+                    Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+                )
         return None
+
+
+class NameCellDelegate(QStyledItemDelegate):
+    """Refuerza la jerarquía del nombre del artículo (`§3.3`)."""
+
+    def initStyleOption(self, opcion, indice):  # noqa: N802
+        super().initStyleOption(opcion, indice)
+        opcion.displayAlignment = (
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+        )
+        fuente = QFont(opcion.font)
+        fuente.setWeight(QFont.Weight.DemiBold)
+        opcion.font = fuente
 
 
 class StatusChipDelegate(QStyledItemDelegate):
@@ -106,24 +135,75 @@ class StatusChipDelegate(QStyledItemDelegate):
 
     def paint(self, painter, opcion, indice):  # noqa: N802
         texto = str(indice.data(Qt.ItemDataRole.DisplayRole) or "")
+        if not texto or texto == "—":
+            return
         fondo, color = _estilos_estado().get(texto, (_COL.borde_suave, _COL.texto_secundario))
         painter.save()
         painter.setRenderHint(painter.RenderHint.Antialiasing)
-        rect = opcion.rect.adjusted(6, 8, -6, -8)
+        rect = opcion.rect.adjusted(8, 7, -8, -7)
+        radio = max(4.0, rect.height() / 2)
+        borde = QColor(color)
+        borde.setAlpha(70)
         painter.setBrush(QColor(fondo))
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.drawRoundedRect(rect, 4, 4)
+        painter.setPen(QPen(borde, 1))
+        painter.drawRoundedRect(rect, radio, radio)
         painter.setPen(QColor(color))
         fuente = QFont(opcion.font)
-        fuente.setPointSize(max(8, fuente.pointSize() - 1))
+        fuente.setPixelSize(12)
         fuente.setWeight(QFont.Weight.DemiBold)
         painter.setFont(fuente)
         painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, texto)
         painter.restore()
 
 
+class AccionesCellDelegate(QStyledItemDelegate):
+    """Botón de menú de fila: una pastilla «⋯» que abre las acciones (`§3.7`)."""
+
+    def paint(self, painter, opcion, indice):  # noqa: N802
+        painter.save()
+        painter.setRenderHint(painter.RenderHint.Antialiasing)
+        rect = opcion.rect.adjusted(12, 6, -12, -6)
+        resaltado = bool(
+            opcion.state & QStyle.StateFlag.State_MouseOver
+        ) or bool(opcion.state & QStyle.StateFlag.State_Selected)
+        painter.setBrush(
+            QColor(_COL.azul_claro) if resaltado else QColor(_COL.superficie)
+        )
+        painter.setPen(QPen(QColor(_COL.azul_primario if resaltado else _COL.borde), 1))
+        painter.drawRoundedRect(rect, 6, 6)
+        painter.setPen(QColor(_COL.azul_primario if resaltado else _COL.texto_secundario))
+        fuente = QFont(opcion.font)
+        fuente.setPixelSize(16)
+        fuente.setWeight(QFont.Weight.Bold)
+        painter.setFont(fuente)
+        painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, "⋯")
+        painter.restore()
+
+
 class QuantityCellDelegate(QStyledItemDelegate):
-    """Cifra tabular alineada a la derecha (`§3.3`)."""
+    """Cifra tabular alineada a la derecha (`§3.3`).
+
+    Con `alerta=True`, los valores mayores que cero se dibujan en negrita, con el
+    color indicado y un punto de aviso a la izquierda: la jerarquía no depende solo
+    del color. Se usa para «Dañado» y «Faltante» del inventario.
+    """
+
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        *,
+        alerta: bool = False,
+        color_alerta: str | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self._alerta = alerta
+        self._color_alerta = color_alerta or _COL.advertencia_texto
+
+    def _positivo(self, indice) -> bool:
+        try:
+            return int(str(indice.data(Qt.ItemDataRole.DisplayRole))) > 0
+        except (TypeError, ValueError):
+            return False
 
     def initStyleOption(self, opcion, indice):  # noqa: N802
         super().initStyleOption(opcion, indice)
@@ -133,7 +213,25 @@ class QuantityCellDelegate(QStyledItemDelegate):
         fuente = QFont(opcion.font)
         fuente.setStyleHint(QFont.StyleHint.Monospace)
         fuente.setFamily("Consolas")
+        resaltar = self._alerta and self._positivo(indice)
+        if resaltar:
+            fuente.setWeight(QFont.Weight.Bold)
         opcion.font = fuente
+        if resaltar:
+            color = QColor(self._color_alerta)
+            opcion.palette.setColor(QPalette.ColorRole.Text, color)
+            opcion.palette.setColor(QPalette.ColorRole.HighlightedText, color)
+
+    def paint(self, painter, opcion, indice):  # noqa: N802
+        if self._alerta and self._positivo(indice):
+            painter.save()
+            painter.setRenderHint(painter.RenderHint.Antialiasing)
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(QColor(self._color_alerta))
+            centro = opcion.rect.center()
+            painter.drawEllipse(QRect(opcion.rect.left() + 12, centro.y() - 2, 4, 4))
+            painter.restore()
+        super().paint(painter, opcion, indice)
 
 
 class UnitCodeBadgeDelegate(QStyledItemDelegate):

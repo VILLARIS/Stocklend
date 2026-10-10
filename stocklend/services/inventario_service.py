@@ -14,7 +14,12 @@ from dataclasses import replace
 
 from ..data.database import transaction
 from ..data.repositories import ArticuloRepo, CategoriaRepo, MovimientoRepo
-from ..domain.entidades import Articulo, Categoria, MovimientoInventario
+from ..domain.entidades import (
+    Articulo,
+    Categoria,
+    MovimientoInventario,
+    ResumenInventario,
+)
 from ..domain.enums import TipoMovimiento
 from ..domain.excepciones import NoEncontradoError, ReglaNegocioError
 from ._comun import (
@@ -214,6 +219,15 @@ class InventarioService:
             return self._articulos.buscar(
                 termino, limite=limite, desplazamiento=desplazamiento
             )
+
+    def resumen(self) -> ResumenInventario:
+        """Agregados reales del inventario para las tarjetas de la pantalla.
+
+        Se calcula con una única consulta SQL sobre ``articulo``; no cambia el
+        esquema y refleja siempre el estado vigente de los contadores.
+        """
+        with transaction(self._conn):
+            return self._articulos.resumen()
 
     def editar_articulo(
         self,

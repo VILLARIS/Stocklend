@@ -37,6 +37,12 @@ _PLANTILLAS: dict[str, str] = {
     "incidentes": f'<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">'
     f'<path {_TRAZO} d="M12 3.8 3 20h18z"/><path {_TRAZO} d="M12 10.4v4"/>'
     f'<path {_TRAZO} d="M12 17.2h.01"/></svg>',
+    "disponible": f'<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">'
+    f'<circle {_TRAZO} cx="12" cy="12" r="8.5"/>'
+    f'<path {_TRAZO} d="M8.4 12.4 11 15l4.8-5.2"/></svg>',
+    "buscar": f'<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">'
+    f'<circle {_TRAZO} cx="10.5" cy="10.5" r="6.5"/>'
+    f'<path {_TRAZO} d="M15.6 15.6 20.5 20.5"/></svg>',
     "unidades": f'<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">'
     f'<rect {_TRAZO} x="4" y="4" width="7" height="7" rx="1"/>'
     f'<rect {_TRAZO} x="13" y="4" width="7" height="7" rx="1"/>'

@@ -5,7 +5,7 @@ from __future__ import annotations
 import sqlite3
 from dataclasses import replace
 
-from ...domain.entidades import Articulo
+from ...domain.entidades import Articulo, ResumenInventario
 from ...domain.excepciones import NoEncontradoError
 from ._comun import LIMITE_POR_DEFECTO, validar_pagina
 
@@ -170,6 +170,26 @@ class ArticuloRepo:
         if condiciones:
             sql += " WHERE " + " AND ".join(condiciones)
         return int(self._conn.execute(sql, parametros).fetchone()[0])
+
+    def resumen(self) -> ResumenInventario:
+        """Agrega el inventario en una sola consulta (RF-INV-05).
+
+        Cuenta los artículos y suma sus contadores con SQL, sin traer las filas a
+        memoria ni modificar el esquema.
+        """
+        fila = self._conn.execute(
+            "SELECT COUNT(*) AS articulos,"
+            " COALESCE(SUM(cantidad_total), 0) AS total,"
+            " COALESCE(SUM(cantidad_disponible), 0) AS disponible,"
+            " COALESCE(SUM(cantidad_prestada), 0) AS prestada"
+            " FROM articulo"
+        ).fetchone()
+        return ResumenInventario(
+            articulos=int(fila["articulos"]),
+            unidades_total=int(fila["total"]),
+            disponibles=int(fila["disponible"]),
+            prestadas=int(fila["prestada"]),
+        )
 
     def actualizar_datos(self, articulo: Articulo) -> None:
         """Actualiza los campos descriptivos, sin tocar los contadores."""

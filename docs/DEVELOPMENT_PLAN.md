@@ -333,6 +333,36 @@ modo que un incidente resuelto no se reabre desde la interfaz.
 
 ---
 
+### Etapa 6.5 — Rediseño de Inventario
+
+**Alcance (solo presentación de Inventario):** no toca la barra lateral, el esquema ni
+las reglas de negocio. Reorganiza la pantalla según una referencia visual aprobada:
+
+- **Fila de cuatro tarjetas** con cifras reales de un **agregado SQL** (una consulta,
+  sin cargar todas las filas): artículos, unidades totales, disponibles y prestadas.
+  Refluye a 2/1 columnas en pantallas pequeñas (`FilaEstadisticas`).
+- **Contenedor principal** (`QFrame#contenedor_inventario`) que agrupa pestañas
+  compactas con icono (Artículos / Unidades / Categorías), buscador, filtro de
+  categoría y el área tabla + detalle.
+- **Tabla de artículos rediseñada** con columna `Estado` (`Prestable` / `No prestable`
+  desde `articulo.prestable`) y columna `Acciones` (`⋯`) que reutiliza el menú de fila.
+
+**Capa de datos añadida:** `ResumenInventario` (read model en `domain/entidades.py`),
+`ArticuloRepo.resumen()` (agregado en una consulta) e `InventarioService.resumen()`.
+Ninguna regla de negocio cambia.
+
+**Estado (Etapa 6.5):** implementada. `pages/inventario.py` reescrito; `widgets/`
+añade `AccionesCellDelegate` y `FilaEstadisticas`; `StatCard` admite icono opcional;
+`theme.py` añade el QSS de `#dato_destacado`, `#icono_estadistica`,
+`#contenedor_inventario` y `#pestanas_inventario`; `icons.py` añade el icono
+`disponible` (todo offline). La suite pasa completa (**402 pruebas**, con casos nuevos
+en `tests/integration/test_servicio_inventario.py` y `tests/gui/test_paginas.py`) y
+`ruff` no reporta hallazgos. **Limitación:** el agente no dispone de la imagen de
+referencia, así que la verificación es **geométrica y de estilos** (capturas offscreen
+a 1360×840, 1024×640 y maximizada), no una comparación visual afirmada.
+
+---
+
 ### Etapa 7 — Panel y reportes
 
 **Trabajo:**

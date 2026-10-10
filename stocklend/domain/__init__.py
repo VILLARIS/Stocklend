@@ -19,6 +19,7 @@ from .entidades import (
     MovimientoInventario,
     Prestamo,
     PrestamoDetalle,
+    ResumenInventario,
 )
 from .enums import (
     Cubo,
@@ -69,6 +70,7 @@ __all__ = [
     "RangoFechas",
     "ReglaNegocioError",
     "ResponsabilidadIncidente",
+    "ResumenInventario",
     "StockLendError",
     "TipoIncidente",
     "TipoMovimiento",
