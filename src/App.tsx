@@ -1,6 +1,7 @@
 import { HashRouter, Routes, Route } from "react-router-dom";
 import { AppLayout } from "./components/layout/AppLayout";
 import { Dashboard } from "./pages/Dashboard";
+import { InventoryPage } from "./pages/InventoryPage";
 import { PendingPage } from "./pages/PendingPage";
 
 function App() {
@@ -9,7 +10,7 @@ function App() {
       <Routes>
         <Route element={<AppLayout />}>
           <Route path="/" element={<Dashboard />} />
-          <Route path="/inventario" element={<PendingPage title="Inventario" subtitle="Artículos, unidades y existencias" />} />
+          <Route path="/inventario" element={<InventoryPage />} />
           <Route path="/estudiantes" element={<PendingPage title="Estudiantes" subtitle="Directorio de estudiantes y sus préstamos" />} />
           <Route path="/prestamos" element={<PendingPage title="Préstamos" subtitle="Registro de entregas a estudiantes" />} />
           <Route path="/devoluciones" element={<PendingPage title="Devoluciones" subtitle="Registro de devoluciones de equipos" />} />
