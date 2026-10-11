@@ -4,16 +4,25 @@
   --color-brand: #1E5AA8;
   --color-brand-dark: #153E75;
   --color-brand-hover: #2861A5;
+  --color-brand-tint: #E8F0FB;
   --color-surface: #FFFFFF;
   --color-page: #F5F7FA;
   --color-text: #1B2430;
   --color-text-secondary: #5A6672;
   --color-success: #1E7B45;
+  --color-success-tint: #E6F4EC;
   --color-warning: #9C5800;
+  --color-warning-tint: #FDF1E0;
   --color-error: #B3261E;
+  --color-error-tint: #FCEAE9;
   --color-border: #D8DEE7;
+  --color-border-soft: #E6EBF2;
   --color-border-strong: #828D9E;
   --font-sans: "Segoe UI", system-ui, -apple-system, sans-serif;
+
+  --shadow-card: 0 1px 2px rgba(27, 36, 48, 0.06);
+  --shadow-card-hover: 0 4px 14px rgba(27, 36, 48, 0.1);
+  --radius-card: 10px;
 }
 
 body {
@@ -21,4 +30,32 @@ body {
   background-color: var(--color-page);
   color: var(--color-text);
   font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #c7d0dc transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c7d0dc;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #aeb9c8;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
 }

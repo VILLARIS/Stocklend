@@ -1,14 +1,24 @@
-import { Package } from "lucide-react";
+import { HashRouter, Routes, Route } from "react-router-dom";
+import { AppLayout } from "./components/layout/AppLayout";
+import { Dashboard } from "./pages/Dashboard";
+import { PendingPage } from "./pages/PendingPage";
 
 function App() {
   return (
-    <div className="flex h-screen items-center justify-center bg-page">
-      <div className="text-center space-y-4">
-        <Package className="mx-auto h-16 w-16 text-brand" />
-        <h1 className="text-3xl font-semibold text-text">StockLend</h1>
-        <p className="text-text-secondary">Tauri + React + Tailwind CSS funcionando correctamente.</p>
-      </div>
-    </div>
+    <HashRouter>
+      <Routes>
+        <Route element={<AppLayout />}>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/inventario" element={<PendingPage title="Inventario" subtitle="Artículos, unidades y existencias" />} />
+          <Route path="/estudiantes" element={<PendingPage title="Estudiantes" subtitle="Directorio de estudiantes y sus préstamos" />} />
+          <Route path="/prestamos" element={<PendingPage title="Préstamos" subtitle="Registro de entregas a estudiantes" />} />
+          <Route path="/devoluciones" element={<PendingPage title="Devoluciones" subtitle="Registro de devoluciones de equipos" />} />
+          <Route path="/incidentes" element={<PendingPage title="Incidentes" subtitle="Control de daños, pérdidas y alertas" />} />
+          <Route path="/reportes" element={<PendingPage title="Reportes" subtitle="Historial, filtros y exportaciones" />} />
+          <Route path="/configuracion" element={<PendingPage title="Configuración" subtitle="Preferencias de la aplicación" />} />
+        </Route>
+      </Routes>
+    </HashRouter>
   );
 }
 
