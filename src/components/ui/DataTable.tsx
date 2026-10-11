@@ -15,6 +15,7 @@ interface DataTableProps<T> {
   keyField: keyof T;
   empty?: ReactNode;
   flat?: boolean;
+  onRowClick?: (row: T) => void;
 }
 
 export function DataTable<T extends Record<string, unknown>>({
@@ -23,6 +24,7 @@ export function DataTable<T extends Record<string, unknown>>({
   keyField,
   empty,
   flat = false,
+  onRowClick,
 }: DataTableProps<T>) {
   if (data.length === 0 && empty) {
     return <>{empty}</>;
@@ -55,7 +57,17 @@ export function DataTable<T extends Record<string, unknown>>({
             {data.map((row) => (
               <tr
                 key={String(row[keyField])}
-                className="border-b border-border-soft transition-colors duration-[120ms] ease-out last:border-0 hover:bg-[#F4F7FB]"
+                onClick={
+                  onRowClick
+                    ? () => {
+                        if (window.getSelection()?.toString()) return;
+                        onRowClick(row);
+                      }
+                    : undefined
+                }
+                className={`border-b border-border-soft transition-colors duration-[120ms] ease-out last:border-0 hover:bg-[#F4F7FB] ${
+                  onRowClick ? "cursor-pointer" : ""
+                }`}
               >
                 {columns.map((col) => (
                   <td

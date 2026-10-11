@@ -59,3 +59,22 @@ body {
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
+@keyframes inventoryFade {
+  from {
+    opacity: 0.45;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inventory-donut-animation {
+    animation: none !important;
+    transition: none !important;
+  }
+}

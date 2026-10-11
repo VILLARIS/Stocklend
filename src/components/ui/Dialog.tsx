@@ -7,12 +7,13 @@ import {
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
-type DialogSize = "sm" | "md" | "lg";
+type DialogSize = "sm" | "md" | "lg" | "xl";
 
 const sizes: Record<DialogSize, string> = {
   sm: "max-w-[480px]",
   md: "max-w-[600px]",
   lg: "max-w-[680px]",
+  xl: "max-w-[720px]",
 };
 
 const FOCUSABLE =

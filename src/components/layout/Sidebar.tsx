@@ -1,6 +1,13 @@
+
+import { useState } from "react";
 import { NavLink } from "react-router-dom";
+
+import background from "../../assets/nabvar/sideBackground.png";
+import logo from "../../assets/branding/stocklend-logo.png";
+import logoIcon from "../../assets/branding/stocklend-icon.png";
+
 import {
-  LayoutDashboard,
+  Home,
   Package,
   Users,
   Handshake,
@@ -8,10 +15,11 @@ import {
   AlertTriangle,
   FileText,
   Settings,
-  Boxes,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
-type Icon = typeof LayoutDashboard;
+type Icon = typeof Home;
 
 interface NavItemDef {
   to: string;
@@ -19,8 +27,12 @@ interface NavItemDef {
   label: string;
 }
 
+interface NavItemProps extends NavItemDef {
+  isCollapsed: boolean;
+}
+
 const primary: NavItemDef[] = [
-  { to: "/", icon: LayoutDashboard, label: "Panel" },
+  { to: "/", icon: Home, label: "Dashboard" },
   { to: "/inventario", icon: Package, label: "Inventario" },
   { to: "/estudiantes", icon: Users, label: "Estudiantes" },
   { to: "/prestamos", icon: Handshake, label: "Préstamos" },
@@ -29,10 +41,19 @@ const primary: NavItemDef[] = [
 ];
 
 const secondary: NavItemDef[] = [
-  { to: "/incidentes", icon: AlertTriangle, label: "Incidentes" },
+  {
+    to: "/incidentes",
+    icon: AlertTriangle,
+    label: "Incidentes",
+  },
 ];
 
-function NavItem({ to, icon: Icon, label }: NavItemDef) {
+function NavItem({
+  to,
+  icon: Icon,
+  label,
+  isCollapsed,
+}: NavItemProps) {
   return (
     <NavLink
       to={to}
@@ -40,28 +61,66 @@ function NavItem({ to, icon: Icon, label }: NavItemDef) {
       title={label}
       aria-label={label}
       className={({ isActive }) =>
-        `group relative flex h-10 items-center gap-3 rounded-md px-3 text-[13.5px] font-medium transition-colors duration-[120ms] ease-out @max-[1151px]:justify-center @max-[1151px]:gap-0 @max-[1151px]:px-0 ${
+        `
+        group relative flex h-11 shrink-0 items-center
+        rounded-xl text-[14px] font-medium
+        transition-[background-color,color,box-shadow]
+        duration-200 ease-out
+
+        ${
+          isCollapsed
+            ? "justify-center px-0"
+            : "gap-3 px-3"
+        }
+
+        ${
           isActive
-            ? "bg-brand-tint text-brand"
-            : "text-[#26334A] hover:bg-[#EDF3FA]"
-        }`
+            ? "bg-gradient-to-r from-[#2877F0] to-[#75B3FF] text-white shadow-[0_6px_16px_rgba(37,99,235,0.20)]"
+            : "text-[#263D66] hover:bg-white/65 hover:text-[#1764D2]"
+        }
+        `
       }
     >
       {({ isActive }) => (
         <>
+          {/* Indicador del elemento seleccionado */}
           <span
-            className={`absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-brand transition-opacity duration-[120ms] ${
-              isActive ? "opacity-100" : "opacity-0"
-            }`}
+            className={`
+              pointer-events-none absolute top-1/2
+              h-7 w-[3px] -translate-y-1/2
+              rounded-full bg-[#2477FF]
+              transition-opacity duration-200
+
+              ${isCollapsed ? "-left-2" : "-left-3"}
+
+              ${
+                isActive
+                  ? "opacity-100"
+                  : "opacity-0"
+              }
+            `}
           />
+
+          {/* Icono de navegación */}
           <Icon
-            className={`h-[18px] w-[18px] shrink-0 transition-colors ${
-              isActive
-                ? "text-brand"
-                : "text-[#5A6672] group-hover:text-[#26334A]"
-            }`}
+            className={`
+              h-5 w-5 shrink-0
+              transition-colors duration-200
+
+              ${
+                isActive
+                  ? "text-white"
+                  : "text-[#465D86] group-hover:text-[#1764D2]"
+              }
+            `}
           />
-          <span className="truncate @max-[1151px]:hidden">{label}</span>
+
+          {/* Nombre de la sección */}
+          {!isCollapsed && (
+            <span className="min-w-0 truncate">
+              {label}
+            </span>
+          )}
         </>
       )}
     </NavLink>
@@ -69,43 +128,225 @@ function NavItem({ to, icon: Icon, label }: NavItemDef) {
 }
 
 export function Sidebar() {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  const toggleSidebar = () => {
+    setIsCollapsed((previous) => !previous);
+  };
+
   return (
-    <aside className="flex w-[232px] shrink-0 flex-col border-r border-border-soft bg-surface transition-[width] duration-[160ms] ease-out @max-[1151px]:w-[68px]">
-      <div className="flex h-16 items-center gap-3 px-5 @max-[1151px]:justify-center @max-[1151px]:px-0">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand text-white shadow-card">
-          <Boxes className="h-5 w-5" />
+    <aside
+      className={`
+        relative flex h-full min-h-0 shrink-0
+        flex-col overflow-hidden
+        border-r border-white/50
+
+        transition-[width] duration-200 ease-out
+
+        ${
+          isCollapsed
+            ? "w-[68px]"
+            : "w-[250px]"
+        }
+      `}
+      style={{
+        backgroundImage: `url(${background})`,
+        backgroundSize: "100% 100%",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+      }}
+    >
+      {/* Capa suave del fondo */}
+      <div
+        className="
+          pointer-events-none absolute inset-0
+          bg-white/10
+        "
+      />
+
+      {/* Contenido */}
+      <div className="relative z-10 flex min-h-0 flex-1 flex-col">
+
+        {/* =====================================
+            LOGO STOCKLEND
+        ===================================== */}
+
+        <div
+          className={`
+            flex h-[88px] shrink-0 items-center
+            transition-[padding] duration-200
+
+            ${
+              isCollapsed
+                ? "justify-center px-2"
+                : "px-3"
+            }
+          `}
+        >
+          {isCollapsed ? (
+            <img
+              src={logoIcon}
+              alt="StockLend"
+              title="StockLend"
+              className="
+                block h-11 w-11 shrink-0
+                object-contain
+              "
+            />
+          ) : (
+            <img
+              src={logo}
+              alt="StockLend — Inventario y préstamos"
+              className="
+                block h-auto w-full
+                max-w-[224px]
+                object-contain
+              "
+            />
+          )}
         </div>
-        <div className="min-w-0 leading-tight @max-[1151px]:hidden">
-          <span className="block truncate text-[15px] font-semibold tracking-tight text-brand-dark">
-            StockLend
-          </span>
-          <span className="block truncate text-[11px] text-text-secondary">
-            Inventario y préstamos
-          </span>
+
+        {/* =====================================
+            NAVEGACIÓN PRINCIPAL
+        ===================================== */}
+
+        <nav
+          aria-label="Navegación principal"
+          className={`
+            flex min-h-0 flex-1 flex-col
+            overflow-y-auto py-3
+
+            ${
+              isCollapsed
+                ? "px-2"
+                : "px-3"
+            }
+          `}
+        >
+          <div className="flex flex-col gap-2">
+            {primary.map((item) => (
+              <NavItem
+                key={item.to}
+                {...item}
+                isCollapsed={isCollapsed}
+              />
+            ))}
+
+            {/* Separador */}
+            <div className="my-3 border-t border-[#BDD1EA]/60" />
+
+            {secondary.map((item) => (
+              <NavItem
+                key={item.to}
+                {...item}
+                isCollapsed={isCollapsed}
+              />
+            ))}
+          </div>
+
+          {/* Configuración al final */}
+          <div className="mt-auto pt-3">
+            <NavItem
+              to="/configuracion"
+              icon={Settings}
+              label="Configuración"
+              isCollapsed={isCollapsed}
+            />
+          </div>
+        </nav>
+
+        {/* =====================================
+            CONTRAER / EXPANDIR SIDEBAR
+        ===================================== */}
+
+        <div
+          className={`
+            shrink-0
+            border-t border-[#BDD1EA]/50
+            py-3
+
+            ${
+              isCollapsed
+                ? "px-2"
+                : "px-5"
+            }
+          `}
+        >
+          <button
+            type="button"
+            onClick={toggleSidebar}
+            title={
+              isCollapsed
+                ? "Expandir barra lateral"
+                : "Contraer barra lateral"
+            }
+            aria-label={
+              isCollapsed
+                ? "Expandir barra lateral"
+                : "Contraer barra lateral"
+            }
+            aria-expanded={!isCollapsed}
+            className={`
+              mb-2 flex w-full items-center
+              gap-2 rounded-lg py-2
+
+              text-[#465D86]
+              transition-colors duration-200
+
+              hover:bg-white/60
+              hover:text-[#1764D2]
+
+              focus-visible:outline-2
+              focus-visible:outline-offset-2
+              focus-visible:outline-[#2877F0]
+
+              ${
+                isCollapsed
+                  ? "justify-center px-0"
+                  : "px-3"
+              }
+            `}
+          >
+            {isCollapsed ? (
+              <ChevronRight
+                className="h-5 w-5 shrink-0"
+              />
+            ) : (
+              <>
+                <ChevronLeft
+                  className="h-5 w-5 shrink-0"
+                />
+
+                <span className="text-[13px] font-medium">
+                  Contraer
+                </span>
+              </>
+            )}
+          </button>
+
+          {/* Versión */}
+          <div
+            className={`
+              text-[11px] text-[#667795]
+
+              ${
+                isCollapsed
+                  ? "text-center"
+                  : ""
+              }
+            `}
+          >
+            <span className="block truncate">
+              v0.1.0
+            </span>
+
+            {!isCollapsed && (
+              <span className="block truncate">
+                esquema 1
+              </span>
+            )}
+          </div>
         </div>
-      </div>
-
-      <nav className="flex flex-1 flex-col overflow-y-auto px-3 py-3 @max-[1151px]:px-2">
-        <div className="flex flex-col gap-1">
-          {primary.map((item) => (
-            <NavItem key={item.to} {...item} />
-          ))}
-
-          <div className="my-2 border-t border-border-soft" />
-
-          {secondary.map((item) => (
-            <NavItem key={item.to} {...item} />
-          ))}
-        </div>
-
-        <div className="mt-auto pt-3">
-          <NavItem to="/configuracion" icon={Settings} label="Configuración" />
-        </div>
-      </nav>
-
-      <div className="shrink-0 border-t border-border-soft px-5 py-3 text-[11px] text-text-secondary @max-[1151px]:px-0 @max-[1151px]:text-center">
-        <span className="block truncate">v0.1.0</span>
-        <span className="block truncate @max-[1151px]:hidden">esquema 1</span>
       </div>
     </aside>
   );
