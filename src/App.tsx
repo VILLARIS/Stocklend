@@ -9,6 +9,7 @@ import { StudentsPage } from "./pages/StudentsPage";
 import { LoansPage } from "./pages/LoansPage";
 import { PendingPage } from "./pages/PendingPage";
 import { ReturnsPage } from "./pages/ReturnsPage";
+import { IncidentsPage } from "./pages/IncidentsPage";
 
 function App() {
   return (
@@ -41,12 +42,7 @@ function App() {
 
           <Route
             path="/incidentes"
-            element={
-              <PendingPage
-                title="Incidentes"
-                subtitle="Control de daños, pérdidas y alertas"
-              />
-            }
+            element={<IncidentsPage />}
           />
 
           <Route
