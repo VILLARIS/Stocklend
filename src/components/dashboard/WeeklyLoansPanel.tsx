@@ -1,29 +1,28 @@
 
 import { ChartNoAxesCombined } from "lucide-react";
 
-import {
-  WeeklyLoansChart,
-  type ChartPoint,
-} from "../ui/DashboardCharts";
+import { WeeklyLoansChart } from "./charts/WeeklyLoansChart";
+import type { ChartPoint } from "./charts/types";
+
+import type { WeeklyActivityDay } from "../../types/dashboard";
 
 import {
   DashboardPanel,
   PanelHeader,
 } from "./DashboardPanel";
 
-// Datos de demostración.
-// Posteriormente vendrán de los préstamos reales.
-const weeklyLoans: ChartPoint[] = [
-  { label: "Lun", value: 8 },
-  { label: "Mar", value: 12 },
-  { label: "Mié", value: 15 },
-  { label: "Jue", value: 11 },
-  { label: "Vie", value: 9 },
-  { label: "Sáb", value: 13 },
-  { label: "Dom", value: 10 },
-];
+interface WeeklyLoansPanelProps {
+  actividad: WeeklyActivityDay[];
+}
 
-export function WeeklyLoansPanel() {
+export function WeeklyLoansPanel({
+  actividad,
+}: WeeklyLoansPanelProps) {
+  const weeklyLoans: ChartPoint[] = actividad.map((dia) => ({
+    label: dia.etiqueta,
+    value: dia.prestamos,
+  }));
+
   const weeklyTotal = weeklyLoans.reduce(
     (sum, day) => sum + day.value,
     0
@@ -35,9 +34,9 @@ export function WeeklyLoansPanel() {
       : 0;
 
   const busiestDay =
-    weeklyLoans.length > 0
-      ? weeklyLoans.reduce((best, day) =>
-          day.value > best.value ? day : best
+    weeklyTotal > 0
+      ? weeklyLoans.reduce((masActivo, dia) =>
+          dia.value > masActivo.value ? dia : masActivo
         )
       : null;
 

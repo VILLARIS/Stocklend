@@ -1,4 +1,4 @@
-import type { ChartSegment } from "../../ui/DashboardCharts";
+import type { ChartSegment } from "./types";
 
 // ========================================
 // GRÁFICO DE CATEGORÍAS

@@ -11,9 +11,8 @@ import {
   PanelHeader,
 } from "./DashboardPanel";
 
-import {
-  demoRecentLoans,
-} from "../../data/demoData";
+import { formatLocalDate } from "../../utils/formatDate";
+import type { RecentLoan } from "../../types/dashboard";
 
 // ========================================
 // UTILIDADES
@@ -37,12 +36,47 @@ function getInitials(fullName: string): string {
     .join("");
 }
 
+type LoanBadgeVariant = "info" | "neutral" | "error";
+
+interface LoanStatus {
+  label: string;
+  variant: LoanBadgeVariant;
+}
+
+function describeEstado(estado: string): LoanStatus {
+  switch (estado.trim().toLowerCase()) {
+    case "activo":
+      return { label: "Activo", variant: "info" };
+    case "cerrado":
+      return { label: "Cerrado", variant: "neutral" };
+    case "anulado":
+      return { label: "Anulado", variant: "error" };
+    default: {
+      const limpio = estado.trim();
+      return {
+        label:
+          limpio === ""
+            ? "Desconocido"
+            : limpio.charAt(0).toUpperCase() +
+              limpio.slice(1),
+        variant: "neutral",
+      };
+    }
+  }
+}
+
 // ========================================
 // PRÉSTAMOS RECIENTES
 // ========================================
 
-export function RecentLoansPanel() {
-  const recentLoans = demoRecentLoans.slice(0, 4);
+interface RecentLoansPanelProps {
+  prestamos: RecentLoan[];
+}
+
+export function RecentLoansPanel({
+  prestamos,
+}: RecentLoansPanelProps) {
+  const recentLoans = prestamos;
 
   return (
     <DashboardPanel className="min-h-[190px]">
@@ -100,8 +134,10 @@ export function RecentLoansPanel() {
           <div className="flex flex-col">
             {recentLoans.map((loan) => {
               const initials = getInitials(
-                loan.student
+                loan.estudiante
               );
+
+              const estado = describeEstado(loan.estado);
 
               return (
                 <div
@@ -147,9 +183,9 @@ export function RecentLoansPanel() {
                         font-semibold
                         text-[#20365B]
                       "
-                      title={loan.student}
+                      title={loan.estudiante}
                     >
-                      {loan.student}
+                      {loan.estudiante}
                     </p>
 
                     {/* DETALLES DEL PRÉSTAMO */}
@@ -188,8 +224,8 @@ export function RecentLoansPanel() {
                       >
                         <Package className="h-3 w-3" />
 
-                        {loan.items}{" "}
-                        {loan.items === 1
+                        {loan.articulos}{" "}
+                        {loan.articulos === 1
                           ? "art."
                           : "arts."}
                       </span>
@@ -206,23 +242,15 @@ export function RecentLoansPanel() {
                           text-[#8796AD]
                         "
                       >
-                        {loan.date}
+                        {formatLocalDate(loan.fecha) || loan.fecha}
                       </span>
                     </div>
                   </div>
 
                   {/* ESTADO */}
                   <div className="shrink-0">
-                    <Badge
-                      variant={
-                        loan.status === "Activo"
-                          ? "info"
-                          : loan.status === "Cerrado"
-                            ? "neutral"
-                            : "error"
-                      }
-                    >
-                      {loan.status}
+                    <Badge variant={estado.variant}>
+                      {estado.label}
                     </Badge>
                   </div>
                 </div>

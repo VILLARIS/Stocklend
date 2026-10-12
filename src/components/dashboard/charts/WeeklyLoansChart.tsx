@@ -1,5 +1,5 @@
 import { useId, useState } from "react";
-import type { ChartPoint } from "../../ui/DashboardCharts";
+import type { ChartPoint } from "./types";
 
 // ========================================
 // UTILIDAD PARA CURVAS SUAVES

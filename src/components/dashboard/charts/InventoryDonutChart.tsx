@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { ChartSegment } from "../../ui/DashboardCharts";
+import type { ChartSegment } from "./types";
 
 // ========================================
 // GRÁFICO DE INVENTARIO
