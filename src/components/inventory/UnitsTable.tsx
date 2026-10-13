@@ -1,19 +1,11 @@
 
 import { useMemo } from "react";
-import {
-  Boxes,
-  Package,
-  CookingPot,
-  UtensilsCrossed,
-  Clipboard,
-  Blend,
-  Microwave,
-  type LucideIcon,
-} from "lucide-react";
+import { Boxes } from "lucide-react";
 
 import { DataTable, type Column } from "../ui/DataTable";
 import { EmptyState } from "../ui/EmptyState";
 import { Button } from "../ui/Button";
+import { getArticleIcon } from "./articleIcon";
 import { UnitActionsMenu } from "./UnitActionsMenu";
 
 import type { InventoryUnit } from "../../data/inventoryData";
@@ -24,50 +16,6 @@ function Dash() {
       —
     </span>
   );
-}
-
-function getArticleIcon(name: string): LucideIcon {
-  const value = name.toLowerCase();
-
-  if (
-    value.includes("olla") ||
-    value.includes("cacerola") ||
-    value.includes("sartén") ||
-    value.includes("sarten")
-  ) {
-    return CookingPot;
-  }
-
-  if (
-    value.includes("cuchillo") ||
-    value.includes("cubierto") ||
-    value.includes("tenedor")
-  ) {
-    return UtensilsCrossed;
-  }
-
-  if (
-    value.includes("tabla") ||
-    value.includes("bandeja")
-  ) {
-    return Clipboard;
-  }
-
-  if (
-    value.includes("licuadora") ||
-    value.includes("batidora")
-  ) {
-    return Blend;
-  }
-
-  if (
-    value.includes("horno") ||
-    value.includes("microondas")
-  ) {
-    return Microwave;
-  }
-
-  return Package;
 }
 
 function UnitThumbnail({ name }: { name: string }) {

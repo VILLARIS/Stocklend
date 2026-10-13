@@ -164,9 +164,9 @@ export function StudentFormDialog({
       subtitle={
         isEdit
           ? "Actualiza la información del estudiante seleccionado."
-          : "Registra un nuevo estudiante en el directorio."
+          : "Registra un estudiante para gestionar sus préstamos."
       }
-      size="md"
+      size="sm"
       initialFocusRef={isEdit ? nombresRef : codigoRef}
       footer={
         <>

@@ -1,4 +1,3 @@
-import { useCallback, useEffect, useRef, useState } from "react";
 import {
   MoreHorizontal,
   Pencil,
@@ -9,6 +8,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { InventoryArticle } from "../../data/inventoryData";
+import { useFloatingMenu } from "./useFloatingMenu";
+import { FloatingMenu } from "./FloatingMenu";
 
 interface Action {
   label: string;
@@ -24,60 +25,10 @@ interface RowActionsMenuProps {
 }
 
 export function RowActionsMenu({ item, onEdit, onDetails }: RowActionsMenuProps) {
-  const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState<{ top: number; left: number }>({
-    top: 0,
-    left: 0,
+  const { open, setOpen, pos, buttonRef, menuRef } = useFloatingMenu({
+    menuWidth: 224,
+    estimatedHeight: 236,
   });
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  const place = useCallback(() => {
-    const rect = buttonRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const menuWidth = 224;
-    const estimatedHeight = 236;
-    const left = Math.max(
-      8,
-      Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8),
-    );
-    const overflowsBottom = rect.bottom + 6 + estimatedHeight > window.innerHeight;
-    const top = overflowsBottom
-      ? Math.max(8, rect.top - estimatedHeight - 6)
-      : rect.bottom + 6;
-    setPos({ top, left });
-  }, []);
-
-  useEffect(() => {
-    if (!open) return;
-    place();
-    const onResize = () => place();
-    const onPointerDown = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (
-        !menuRef.current?.contains(target) &&
-        !buttonRef.current?.contains(target)
-      ) {
-        setOpen(false);
-      }
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setOpen(false);
-        buttonRef.current?.focus();
-      }
-    };
-    window.addEventListener("resize", onResize);
-    window.addEventListener("scroll", onResize, true);
-    document.addEventListener("mousedown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.removeEventListener("resize", onResize);
-      window.removeEventListener("scroll", onResize, true);
-      document.removeEventListener("mousedown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [open, place]);
 
   const actions: Action[] = [
     { label: "Ver detalles", icon: Eye, onSelect: () => onDetails(item) },
@@ -117,14 +68,13 @@ export function RowActionsMenu({ item, onEdit, onDetails }: RowActionsMenuProps)
         <MoreHorizontal className="h-4 w-4" />
       </button>
 
-      {open && (
-        <div
-          ref={menuRef}
-          role="menu"
-          aria-label={`Acciones para ${item.nombre}`}
-          style={{ top: pos.top, left: pos.left }}
-          className="fixed z-50 w-56 overflow-hidden rounded-md border border-border bg-surface py-1 shadow-card-hover"
-        >
+      <FloatingMenu
+        open={open}
+        pos={pos}
+        menuRef={menuRef}
+        label={`Acciones para ${item.nombre}`}
+        className="fixed z-50 w-56 overflow-hidden rounded-md border border-border bg-surface py-1 shadow-card-hover"
+      >
           {activeItems.map((action) => {
             const Icon = action.icon;
             return (
@@ -165,8 +115,7 @@ export function RowActionsMenu({ item, onEdit, onDetails }: RowActionsMenuProps)
               })}
             </>
           )}
-        </div>
-      )}
+      </FloatingMenu>
     </>
   );
 }

@@ -18,6 +18,10 @@ export type InventoryArticle = {
   nombre: string;
   codigo: string | null;
   categoria: string;
+  // Identificador de la categoría y nota reales. Opcionales para no romper los
+  // datos de demostración, que no los declaran.
+  categoriaId?: number;
+  notas?: string | null;
   disponible: number;
   prestado: number;
   danado: number;
@@ -48,6 +52,9 @@ export type InventoryCategory = {
   nombre: string;
   descripcion: string | null;
   articulos: number;
+  // Estado real de la categoría (`activo`). Opcional para no romper los datos de
+  // demostración, que no lo declaran.
+  activo?: boolean;
 };
 
 export const inventoryArticles: InventoryArticle[] = [

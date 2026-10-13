@@ -16,6 +16,7 @@ import {
 import { DataTable, type Column } from "../ui/DataTable";
 import { EmptyState } from "../ui/EmptyState";
 import { Button } from "../ui/Button";
+import { Badge } from "../ui/Badge";
 import { CategoryActionsMenu } from "./CategoryActionsMenu";
 
 import type { InventoryCategory } from "../../data/inventoryData";
@@ -86,10 +87,12 @@ function CategoryThumbnail({ name }: { name: string }) {
 interface CategoriesTableProps {
   items: InventoryCategory[];
   filtered: boolean;
+  busy?: boolean;
   onClear: () => void;
   onNew: () => void;
   onViewArticles: (categoria: InventoryCategory) => void;
   onEdit: (categoria: InventoryCategory) => void;
+  onToggleActive: (categoria: InventoryCategory) => void;
 }
 
 // ========================================
@@ -99,10 +102,12 @@ interface CategoriesTableProps {
 export function CategoriesTable({
   items,
   filtered,
+  busy = false,
   onClear,
   onNew,
   onViewArticles,
   onEdit,
+  onToggleActive,
 }: CategoriesTableProps) {
   const columns = useMemo<Column<InventoryCategory>[]>(
     () => [
@@ -115,11 +120,11 @@ export function CategoriesTable({
             <CategoryThumbnail name={row.nombre} />
 
             <span
-              className="
+              className={`
                 min-w-0 truncate
                 text-[13px] font-semibold
-                text-[#1D3155]
-              "
+                ${row.activo === false ? "text-[#8493AE]" : "text-[#1D3155]"}
+              `}
               title={row.nombre}
             >
               {row.nombre}
@@ -146,6 +151,21 @@ export function CategoriesTable({
             <span className="text-[13px] text-[#A7B2C1]">
               —
             </span>
+          ),
+      },
+      {
+        key: "estado",
+        header: "Estado",
+        width: "110px",
+        render: (row) =>
+          row.activo === false ? (
+            <Badge variant="neutral" dot>
+              Inactiva
+            </Badge>
+          ) : (
+            <Badge variant="success" dot>
+              Activa
+            </Badge>
           ),
       },
       {
@@ -179,14 +199,16 @@ export function CategoriesTable({
           <div className="flex justify-end">
             <CategoryActionsMenu
               categoria={row}
+              busy={busy}
               onViewArticles={onViewArticles}
               onEdit={onEdit}
+              onToggleActive={onToggleActive}
             />
           </div>
         ),
       },
     ],
-    [onViewArticles, onEdit]
+    [onViewArticles, onEdit, onToggleActive, busy]
   );
 
   return (

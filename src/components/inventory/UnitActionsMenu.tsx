@@ -1,4 +1,3 @@
-import { useEffect, useRef, useState } from "react";
 import {
   MoreHorizontal,
   Eye,
@@ -7,6 +6,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { InventoryUnit } from "../../data/inventoryData";
+import { useFloatingMenu } from "./useFloatingMenu";
+import { FloatingMenu } from "./FloatingMenu";
 
 interface Action {
   label: string;
@@ -21,48 +22,10 @@ interface UnitActionsMenuProps {
 }
 
 export function UnitActionsMenu({ item, onDetails }: UnitActionsMenuProps) {
-  const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState<{ top: number; left: number }>({
-    top: 0,
-    left: 0,
+  const { open, setOpen, pos, buttonRef, menuRef } = useFloatingMenu({
+    menuWidth: 224,
+    estimatedHeight: 132,
   });
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const rect = buttonRef.current?.getBoundingClientRect();
-    if (rect) {
-      const menuHeight = 132;
-      const openUp = rect.bottom + menuHeight > window.innerHeight - 8;
-      setPos({
-        top: openUp ? rect.top - menuHeight - 4 : rect.bottom + 4,
-        left: Math.max(8, rect.right - 224),
-      });
-    }
-
-    const onDocPointer = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (
-        !menuRef.current?.contains(target) &&
-        !buttonRef.current?.contains(target)
-      ) {
-        setOpen(false);
-      }
-    };
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setOpen(false);
-        buttonRef.current?.focus();
-      }
-    };
-    document.addEventListener("mousedown", onDocPointer);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDocPointer);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
 
   const actions: Action[] = [
     { label: "Ver detalles", icon: Eye, onSelect: () => onDetails(item) },
@@ -97,14 +60,13 @@ export function UnitActionsMenu({ item, onDetails }: UnitActionsMenuProps) {
         <MoreHorizontal className="h-4 w-4" />
       </button>
 
-      {open && (
-        <div
-          ref={menuRef}
-          role="menu"
-          aria-label={`Acciones para la unidad ${item.codigo}`}
-          style={{ top: pos.top, left: pos.left }}
-          className="fixed z-50 w-56 overflow-hidden rounded-md border border-border bg-surface py-1 shadow-card-hover"
-        >
+      <FloatingMenu
+        open={open}
+        pos={pos}
+        menuRef={menuRef}
+        label={`Acciones para la unidad ${item.codigo}`}
+        className="fixed z-50 w-56 overflow-hidden rounded-md border border-border bg-surface py-1 shadow-card-hover"
+      >
           {activeItems.map((action) => {
             const Icon = action.icon;
             return (
@@ -145,8 +107,7 @@ export function UnitActionsMenu({ item, onDetails }: UnitActionsMenuProps) {
               })}
             </>
           )}
-        </div>
-      )}
+      </FloatingMenu>
     </>
   );
 }

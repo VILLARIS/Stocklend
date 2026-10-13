@@ -276,8 +276,8 @@ export function StudentDetailsDialog({
       open={open}
       onClose={onClose}
       title="Detalles del estudiante"
-      subtitle="Consulta sus datos, préstamos e incidencias."
-      size="xl"
+      subtitle="Información y actividad del estudiante seleccionado."
+      size="lg"
       footer={
         <Button variant="secondary" onClick={onClose}>
           Cerrar

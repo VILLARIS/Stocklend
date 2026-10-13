@@ -1,20 +1,10 @@
 import { useMemo } from "react";
-import {
-  PackageSearch,
-  CookingPot,
-  UtensilsCrossed,
-  ChefHat,
-  CookingPot as PanIcon,
-  Clipboard,
-  Blend,
-  Microwave,
-  Package,
-  type LucideIcon,
-} from "lucide-react";
+import { PackageSearch } from "lucide-react";
 
 import { DataTable, type Column } from "../ui/DataTable";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
+import { getArticleIcon } from "./articleIcon";
 import { RowActionsMenu } from "./RowActionsMenu";
 
 import type { InventoryArticle } from "../../data/inventoryData";
@@ -44,40 +34,6 @@ function Quantity({
       {value}
     </span>
   );
-}
-
-function getArticleIcon(name: string): LucideIcon {
-  const normalized = name.toLowerCase();
-
-  if (normalized.includes("olla") || normalized.includes("cacerola")) {
-    return CookingPot;
-  }
-
-  if (normalized.includes("cuchillo") || normalized.includes("cubierto")) {
-    return UtensilsCrossed;
-  }
-
-  if (normalized.includes("sartén") || normalized.includes("sarten")) {
-    return PanIcon;
-  }
-
-  if (normalized.includes("tabla") || normalized.includes("bandeja")) {
-    return Clipboard;
-  }
-
-  if (normalized.includes("licuadora") || normalized.includes("batidora")) {
-    return Blend;
-  }
-
-  if (normalized.includes("horno") || normalized.includes("microondas")) {
-    return Microwave;
-  }
-
-  if (normalized.includes("chef") || normalized.includes("cocina")) {
-    return ChefHat;
-  }
-
-  return Package;
 }
 
 function ArticleThumbnail({

@@ -8,6 +8,8 @@ import {
   Boxes,
   Info,
   Hash,
+  Loader2,
+  CircleAlert,
 } from "lucide-react";
 
 import { Dialog } from "../ui/Dialog";
@@ -25,14 +27,53 @@ const NOTA_MAX = 200;
 
 type FormMode = "create" | "edit";
 
+/** Categoría ofrecida en el formulario (solo activas; la actual aunque esté inactiva). */
+export interface ArticleCategoryOption {
+  id: number;
+  nombre: string;
+  activo: boolean;
+}
+
+/** Nombre ya usado dentro de una categoría, para detectar duplicados (RN-09). */
+export interface ExistingArticle {
+  id: string;
+  nombre: string;
+  categoriaId: number;
+}
+
+/** Unidad individual capturada en el alta. */
+export interface ArticleUnitValue {
+  codigo: string;
+  descripcion: string | null;
+}
+
+/** Valores que el formulario entrega al backend. */
+export interface ArticleFormValues {
+  nombre: string;
+  categoriaId: number;
+  cantidadInicial: number;
+  controlIndividual: boolean;
+  prestable: boolean;
+  notas: string | null;
+  unidades: ArticleUnitValue[];
+}
+
 interface ArticleFormDialogProps {
   open: boolean;
   mode: FormMode;
   article?: InventoryArticle;
   unidades?: InventoryUnit[];
-  categorias: string[];
-  existingNames: string[];
+  categorias: ArticleCategoryOption[];
+  existingArticles: ExistingArticle[];
+  saving: boolean;
+  serverError: string | null;
   onClose: () => void;
+  onSubmit: (values: ArticleFormValues) => void;
+}
+
+/** RN-09: el nombre se compara ignorando mayúsculas y espacios repetidos. */
+function normalize(value: string): string {
+  return value.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
 type FormErrors = {
@@ -257,10 +298,13 @@ export function ArticleFormDialog({
   open,
   mode,
   article,
-  unidades = [],
+  unidades,
   categorias,
-  existingNames,
+  existingArticles,
+  saving,
+  serverError,
   onClose,
+  onSubmit,
 }: ArticleFormDialogProps) {
   const isEdit = mode === "edit";
 
@@ -269,7 +313,7 @@ export function ArticleFormDialog({
   // ----------------------------------------
 
   const [nombre, setNombre] = useState("");
-  const [categoria, setCategoria] = useState("");
+  const [categoriaId, setCategoriaId] = useState("");
   const [cantidad, setCantidad] = useState(0);
   const [controlIndividual, setControlIndividual] =
     useState(false);
@@ -292,7 +336,11 @@ export function ArticleFormDialog({
 
     if (mode === "edit" && article) {
       setNombre(article.nombre);
-      setCategoria(article.categoria);
+      setCategoriaId(
+        article.categoriaId !== undefined
+          ? String(article.categoriaId)
+          : ""
+      );
 
       setCantidad(
         article.disponible +
@@ -303,11 +351,11 @@ export function ArticleFormDialog({
 
       setControlIndividual(article.controlIndividual);
       setPrestable(article.prestable);
-      setNota("");
-      setUnitCodes(unidades.map((unit) => unit.codigo));
+      setNota(article.notas ?? "");
+      setUnitCodes((unidades ?? []).map((unit) => unit.codigo));
     } else {
       setNombre("");
-      setCategoria("");
+      setCategoriaId("");
       setCantidad(0);
       setControlIndividual(false);
       setPrestable(true);
@@ -323,7 +371,7 @@ export function ArticleFormDialog({
   // ----------------------------------------
 
   useEffect(() => {
-    if (!controlIndividual) return;
+    if (isEdit || !controlIndividual) return;
 
     setUnitCodes((previous) => {
       if (previous.length === cantidad) {
@@ -338,7 +386,29 @@ export function ArticleFormDialog({
 
       return next;
     });
-  }, [controlIndividual, cantidad]);
+  }, [isEdit, controlIndividual, cantidad]);
+
+  const categoryOptions = useMemo(() => {
+    const options = categorias
+      .filter((categoria) => categoria.activo)
+      .map((categoria) => ({
+        value: String(categoria.id),
+        label: categoria.nombre,
+      }));
+
+    const actual = categorias.find(
+      (categoria) => String(categoria.id) === categoriaId
+    );
+
+    if (actual !== undefined && !actual.activo) {
+      options.unshift({
+        value: String(actual.id),
+        label: `${actual.nombre} (inactiva)`,
+      });
+    }
+
+    return options;
+  }, [categorias, categoriaId]);
 
   const prefix = useMemo(
     () => codePrefix(nombre),
@@ -376,48 +446,40 @@ export function ArticleFormDialog({
       result.nombre =
         "El nombre del artículo es obligatorio.";
     } else {
-      const own =
-        article?.nombre.trim().toLowerCase();
-
-      const duplicate = existingNames.some(
-        (candidate) => {
-          const value =
-            candidate.trim().toLowerCase();
-
-          if (isEdit && value === own) {
-            return false;
-          }
-
-          return value === name.toLowerCase();
+      const categoriaSeleccionada = Number(categoriaId);
+      const duplicate = existingArticles.some((candidate) => {
+        if (categoriaId === "") return false;
+        if (candidate.categoriaId !== categoriaSeleccionada) return false;
+        if (isEdit && article !== undefined && candidate.id === article.id) {
+          return false;
         }
-      );
+        return normalize(candidate.nombre) === normalize(name);
+      });
 
       if (duplicate) {
         result.nombre =
-          `Ya existe un artículo llamado «${name}».`;
+          `Ya existe un artículo llamado «${name}» en esta categoría.`;
       }
     }
 
-    if (
-      categoria === "" ||
-      !categorias.includes(categoria)
-    ) {
+    const categoriaActual = categorias.find(
+      (categoria) => String(categoria.id) === categoriaId
+    );
+
+    if (categoriaId === "" || categoriaActual === undefined) {
       result.categoria =
         "Elige una categoría de la lista.";
+    } else if (!categoriaActual.activo) {
+      result.categoria =
+        "La categoría está desactivada. Elige una categoría activa.";
     }
 
     if (cantidad < 0) {
       result.cantidad =
         "La cantidad no puede ser menor que cero.";
-    } else if (
-      controlIndividual &&
-      cantidad <= 0
-    ) {
-      result.cantidad =
-        "Un artículo con control individual necesita al menos una unidad.";
     }
 
-    if (controlIndividual && cantidad > 0) {
+    if (!isEdit && controlIndividual && cantidad > 0) {
       const codes = unitCodes
         .slice(0, cantidad)
         .map((code) => code.trim());
@@ -462,6 +524,42 @@ export function ArticleFormDialog({
     markTouched("codes");
   };
 
+  const markAllTouched = () => {
+    setTouched({
+      nombre: true,
+      categoria: true,
+      cantidad: true,
+      codes: true,
+      nota: true,
+    });
+  };
+
+  const handleSubmit = () => {
+    if (saving) return;
+    markAllTouched();
+    if (Object.keys(errors).length > 0) return;
+
+    const notaLimpia = nota.trim();
+
+    onSubmit({
+      nombre: nombre.trim(),
+      categoriaId: Number(categoriaId),
+      cantidadInicial: cantidad,
+      controlIndividual,
+      prestable,
+      notas: notaLimpia === "" ? null : notaLimpia,
+      unidades:
+        controlIndividual && !isEdit
+          ? unitCodes
+              .slice(0, cantidad)
+              .map((codigo) => ({
+                codigo: codigo.trim(),
+                descripcion: null,
+              }))
+          : [],
+    });
+  };
+
   // ----------------------------------------
   // ESTILOS
   // ----------------------------------------
@@ -494,7 +592,7 @@ export function ArticleFormDialog({
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={saving ? () => undefined : onClose}
       title={
         isEdit
           ? "Editar artículo"
@@ -510,25 +608,47 @@ export function ArticleFormDialog({
       footer={
         <>
           <Button
+            type="button"
             variant="secondary"
             onClick={onClose}
+            disabled={saving}
           >
             Cancelar
           </Button>
 
-          <span
-            title="Disponible cuando se conecte la persistencia"
+          <Button
+            type="button"
+            onClick={handleSubmit}
+            disabled={saving}
           >
-            <Button disabled>
-              {isEdit
-                ? "Guardar cambios"
-                : "Registrar artículo"}
-            </Button>
-          </span>
+            {saving && (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            )}
+            {isEdit
+              ? "Guardar cambios"
+              : "Crear artículo"}
+          </Button>
         </>
       }
     >
       <div className="space-y-4">
+
+        {serverError !== null && (
+          <div
+            role="alert"
+            className="
+              flex items-start gap-2
+              rounded-xl border border-[#F3C9CC]
+              bg-[#FDECEE]
+              px-3.5 py-2.5
+              text-[12px] font-medium leading-5
+              text-[#B23540]
+            "
+          >
+            <CircleAlert className="mt-px h-4 w-4 shrink-0" />
+            <span className="min-w-0">{serverError}</span>
+          </div>
+        )}
 
         {/* =====================================
             INFORMACIÓN GENERAL
@@ -560,6 +680,7 @@ export function ArticleFormDialog({
                 ref={nombreRef}
                 id="articulo-nombre"
                 value={nombre}
+                disabled={saving}
                 onChange={(event) =>
                   setNombre(event.target.value)
                 }
@@ -574,7 +695,11 @@ export function ArticleFormDialog({
             {/* CÓDIGO */}
             <FormField
               label="Código"
-              hint="Generado automáticamente por el sistema."
+              hint={
+                isEdit
+                  ? "Código registrado del artículo (no editable)."
+                  : "El artículo se crea sin código propio."
+              }
             >
               <div className="relative">
                 <Hash
@@ -591,9 +716,9 @@ export function ArticleFormDialog({
                   value={
                     isEdit
                       ? article?.codigo ?? "—"
-                      : ""
+                      : "—"
                   }
-                  placeholder="Automático"
+                  placeholder="—"
                   aria-label="Código del artículo"
                   className="
                     h-[39px] w-full
@@ -616,19 +741,15 @@ export function ArticleFormDialog({
               id="articulo-categoria"
               label="Categoría"
               required
-              value={categoria}
+              value={categoriaId}
               onChange={(value) => {
-                setCategoria(value);
+                setCategoriaId(value);
                 markTouched("categoria");
               }}
               placeholder="Elige una categoría"
-              options={categorias.map(
-                (value) => ({
-                  value,
-                  label: value,
-                })
-              )}
+              options={categoryOptions}
               error={showError("categoria")}
+              disabled={saving}
             />
 
             {/* NOTA */}
@@ -644,6 +765,7 @@ export function ArticleFormDialog({
                   value={nota}
                   rows={2}
                   maxLength={NOTA_MAX}
+                  disabled={saving}
                   onChange={(event) =>
                     setNota(event.target.value)
                   }
@@ -727,7 +849,7 @@ export function ArticleFormDialog({
                   onBlur={() =>
                     markTouched("cantidad")
                   }
-                  disabled={isEdit}
+                  disabled={isEdit || saving}
                   invalid={Boolean(
                     showError("cantidad")
                   )}
@@ -833,6 +955,7 @@ export function ArticleFormDialog({
                   icon={<Boxes className="h-[18px] w-[18px]" />}
                   label="Control individual de unidades"
                   hint="Cada unidad tendrá un código de identificación."
+                  disabled={saving}
                 />
               )}
 
@@ -844,6 +967,7 @@ export function ArticleFormDialog({
                 accent="green"
                 label="Puede prestarse"
                 hint="Desactívalo si el artículo está en reparación o restringido."
+                disabled={saving}
               />
             </div>
 
@@ -874,7 +998,7 @@ export function ArticleFormDialog({
                         text-[#253C60]
                       "
                     >
-                      Códigos de unidad ({cantidad})
+                      Códigos de unidad ({isEdit ? unitCodes.length : cantidad})
                     </p>
 
                     <p
@@ -900,6 +1024,7 @@ export function ArticleFormDialog({
                         px-3 text-[11.5px]
                       "
                       onClick={fillCodes}
+                      disabled={saving}
                     >
                       <Sparkles className="mr-1.5 h-3.5 w-3.5" />
                       Generar códigos
@@ -916,9 +1041,10 @@ export function ArticleFormDialog({
                       sm:grid-cols-3
                     "
                   >
-                    {unitCodes
-                      .slice(0, cantidad)
-                      .map((code, index) => {
+                    {(isEdit
+                      ? unitCodes
+                      : unitCodes.slice(0, cantidad)
+                    ).map((code, index) => {
                         const invalid =
                           repeatedCodes.has(
                             code.trim().toLowerCase()
@@ -928,7 +1054,7 @@ export function ArticleFormDialog({
                           <input
                             key={index}
                             value={code}
-                            readOnly={isEdit}
+                            readOnly={isEdit || saving}
                             onChange={(event) => {
                               const value =
                                 event.target.value;

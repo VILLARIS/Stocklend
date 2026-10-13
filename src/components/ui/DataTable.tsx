@@ -22,9 +22,7 @@ interface DataTableProps<T> {
   onRowClick?: (row: T) => void;
 }
 
-export function DataTable<
-  T extends Record<string, unknown>
->({
+export function DataTable<T>({
   columns,
   data,
   keyField,
@@ -207,7 +205,7 @@ export function DataTable<
                     {col.render
                       ? col.render(row)
                       : String(
-                          row[col.key] ?? ""
+                          row[col.key as keyof T] ?? ""
                         )}
                   </td>
                 ))}

@@ -9,12 +9,15 @@ import {
   Boxes,
   CircleCheck,
   ArrowRightLeft,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 
 import background from "../assets/background/background.png";
 
 import { PageHeader } from "../components/layout/PageHeader";
 import { Button } from "../components/ui/Button";
+import { Dialog } from "../components/ui/Dialog";
 
 import {
   InventoryTabs,
@@ -27,7 +30,10 @@ import {
 } from "../components/inventory/InventoryToolbar";
 
 import { InventoryTable } from "../components/inventory/InventoryTable";
-import { ArticleFormDialog } from "../components/inventory/ArticleFormDialog";
+import {
+  ArticleFormDialog,
+  type ArticleFormValues,
+} from "../components/inventory/ArticleFormDialog";
 import { ArticleDetailsDialog } from "../components/inventory/ArticleDetailsDialog";
 
 import { CategoriesToolbar } from "../components/inventory/CategoriesToolbar";
@@ -42,17 +48,26 @@ import {
 import { UnitsTable } from "../components/inventory/UnitsTable";
 import { UnitDetailsDialog } from "../components/inventory/UnitDetailsDialog";
 
-import { DEMO_MODE } from "../data/demoData";
+import type {
+  InventoryArticle,
+  InventoryUnit,
+  InventoryCategory,
+} from "../data/inventoryData";
 
 import {
-  inventoryArticles,
-  inventoryUnits,
-  inventoryCategories,
-  inventoryCategoryNames,
-  type InventoryArticle,
-  type InventoryUnit,
-  type InventoryCategory,
-} from "../data/inventoryData";
+  useInventoryArticles,
+  useInventoryUnits,
+  useInventoryCategories,
+  useInventoryStats,
+  useInventoryCategoryMutations,
+  useInventoryArticleMutations,
+} from "../hooks/useInventory";
+
+import {
+  adaptArticles,
+  adaptUnits,
+  adaptCategories,
+} from "../services/inventoryAdapters";
 
 const PAGE_SIZE = 8;
 
@@ -63,10 +78,6 @@ type DialogState =
   | { mode: "unitDetails"; unit: InventoryUnit }
   | { mode: "categoryCreate" }
   | { mode: "categoryEdit"; category: InventoryCategory };
-
-// ========================================
-// TARJETA DE ESTADÍSTICA
-// ========================================
 
 type StatAccent = "blue" | "violet" | "green" | "orange";
 
@@ -166,10 +177,6 @@ function InventoryStatCard({
   );
 }
 
-// ========================================
-// PAGINACIÓN REUTILIZABLE LOCAL
-// ========================================
-
 function InventoryPagePagination({
   currentPage,
   totalPages,
@@ -231,63 +238,295 @@ function InventoryPagePagination({
   );
 }
 
-// ========================================
-// INVENTARIO
-// ========================================
+function LoadingOverlay() {
+  return (
+    <div className="flex min-h-[200px] items-center justify-center">
+      <Loader2 className="h-6 w-6 animate-spin text-[#267BFA]" />
+    </div>
+  );
+}
+
+function ErrorBanner({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="flex min-h-[200px] flex-col items-center justify-center gap-3">
+      <AlertCircle className="h-8 w-8 text-[#E43F50]" />
+      <p className="max-w-md text-center text-[13px] text-[#435F92]">{message}</p>
+      <Button variant="secondary" onClick={onRetry}>Reintentar</Button>
+    </div>
+  );
+}
 
 export function InventoryPage() {
-  // Pestaña principal
   const [tab, setTab] = useState<InventoryTabKey>("articulos");
 
-  // Filtros de artículos
   const [query, setQuery] = useState("");
   const [categoria, setCategoria] = useState("todas");
   const [estado, setEstado] =
     useState<AvailabilityFilter>("todos");
   const [page, setPage] = useState(1);
 
-  // Filtros de unidades
   const [unitQuery, setUnitQuery] = useState("");
   const [unitCategoria, setUnitCategoria] = useState("todas");
   const [unitEstado, setUnitEstado] =
     useState<UnitStateFilter>("todos");
   const [unitPage, setUnitPage] = useState(1);
 
-  // Filtro de categorías
   const [categoryQuery, setCategoryQuery] = useState("");
 
-  // Modal activo
   const [dialog, setDialog] = useState<DialogState | null>(null);
 
-  // ========================================
-  // ESTADÍSTICAS GENERALES
-  // ========================================
+  const articles = useInventoryArticles();
+  const units = useInventoryUnits();
+  const categories = useInventoryCategories();
+  const stats = useInventoryStats();
+
+  const adaptedArticles = useMemo(
+    () => (articles.data ? adaptArticles(articles.data) : []),
+    [articles.data],
+  );
+  const adaptedUnits = useMemo(
+    () => (units.data ? adaptUnits(units.data) : []),
+    [units.data],
+  );
+  const adaptedCategories = useMemo(
+    () => (categories.data ? adaptCategories(categories.data) : []),
+    [categories.data],
+  );
+
+  const inventoryArticles: InventoryArticle[] = useMemo(
+    () => adaptedArticles.map(({ id, nombre, codigo, categoria: cat, categoriaId, notas, disponible, prestado, danado, faltante, prestable, controlIndividual }) => ({
+      id, nombre, codigo, categoria: cat, categoriaId, notas, disponible, prestado, danado, faltante, prestable, controlIndividual,
+    })),
+    [adaptedArticles],
+  );
+
+  const inventoryUnits: InventoryUnit[] = useMemo(
+    () => adaptedUnits.map(({ id, codigo, articulo, categoria: cat, estado: est, estudiante, prestamo, prestamoFecha, prestamoEstado, incidente, incidenteTipo, incidenteEstado }) => ({
+      id, codigo, articulo, categoria: cat, estado: est, estudiante, prestamo, prestamoFecha, prestamoEstado, incidente, incidenteTipo, incidenteEstado,
+    })),
+    [adaptedUnits],
+  );
+
+  const inventoryCategories: InventoryCategory[] = useMemo(
+    () => adaptedCategories.map(({ id, nombre, descripcion, articulos: art, activo }) => ({
+      id, nombre, descripcion, articulos: art, activo,
+    })),
+    [adaptedCategories],
+  );
+
+  const inventoryCategoryNames = useMemo(
+    () => inventoryCategories.map((c) => c.nombre),
+    [inventoryCategories],
+  );
+
+  const articleCategoryOptions = useMemo(
+    () =>
+      inventoryCategories.map((categoria) => ({
+        id: Number(categoria.id),
+        nombre: categoria.nombre,
+        activo: categoria.activo ?? true,
+      })),
+    [inventoryCategories],
+  );
+
+  const existingArticles = useMemo(
+    () =>
+      inventoryArticles.map((article) => ({
+        id: article.id,
+        nombre: article.nombre,
+        categoriaId: article.categoriaId ?? -1,
+      })),
+    [inventoryArticles],
+  );
+
+  const categoryMutations = useInventoryCategoryMutations();
+  const articleMutations = useInventoryArticleMutations();
+
+  const [categoryNotice, setCategoryNotice] = useState<string | null>(null);
+  const [pendingDeactivate, setPendingDeactivate] =
+    useState<InventoryCategory | null>(null);
+  const [articleNotice, setArticleNotice] = useState<string | null>(null);
+
+  const isCategoryDialogOpen =
+    dialog?.mode === "categoryCreate" || dialog?.mode === "categoryEdit";
+
+  useEffect(() => {
+    if (categoryNotice === null) return;
+    const timer = window.setTimeout(() => setCategoryNotice(null), 3500);
+    return () => window.clearTimeout(timer);
+  }, [categoryNotice]);
+
+  useEffect(() => {
+    if (articleNotice === null) return;
+    const timer = window.setTimeout(() => setArticleNotice(null), 3500);
+    return () => window.clearTimeout(timer);
+  }, [articleNotice]);
+
+  const openArticleCreate = () => {
+    articleMutations.clearError();
+    setArticleNotice(null);
+    setDialog({ mode: "create" });
+  };
+
+  const openArticleEdit = (article: InventoryArticle) => {
+    articleMutations.clearError();
+    setArticleNotice(null);
+    setDialog({ mode: "edit", article });
+  };
+
+  const refreshAfterArticleChange = () => {
+    articles.refetch();
+    categories.refetch();
+    stats.refetch();
+    units.refetch();
+  };
+
+  const handleCreateArticle = async (values: ArticleFormValues) => {
+    const ok = await articleMutations.crear({
+      nombre: values.nombre,
+      categoria_id: values.categoriaId,
+      cantidad_inicial: values.cantidadInicial,
+      control_individual: values.controlIndividual,
+      prestable: values.prestable,
+      notas: values.notas,
+      unidades: values.unidades,
+    });
+    if (!ok) return;
+    setDialog(null);
+    refreshAfterArticleChange();
+    setArticleNotice(`Artículo «${values.nombre}» creado.`);
+  };
+
+  const handleUpdateArticle = async (
+    article: InventoryArticle,
+    values: ArticleFormValues,
+  ) => {
+    const ok = await articleMutations.actualizar({
+      id: Number(article.id),
+      nombre: values.nombre,
+      categoria_id: values.categoriaId,
+      prestable: values.prestable,
+      notas: values.notas,
+    });
+    if (!ok) return;
+    setDialog(null);
+    refreshAfterArticleChange();
+    setArticleNotice(`Artículo «${values.nombre}» actualizado.`);
+  };
+
+  const handleArticleSubmit = (values: ArticleFormValues) => {
+    if (dialog?.mode === "edit") {
+      void handleUpdateArticle(dialog.article, values);
+    } else if (dialog?.mode === "create") {
+      void handleCreateArticle(values);
+    }
+  };
+
+  const openCategoryCreate = () => {
+    categoryMutations.clearError();
+    setCategoryNotice(null);
+    setDialog({ mode: "categoryCreate" });
+  };
+
+  const openCategoryEdit = (category: InventoryCategory) => {
+    categoryMutations.clearError();
+    setCategoryNotice(null);
+    setDialog({ mode: "categoryEdit", category });
+  };
+
+  const handleCreateCategory = async (values: {
+    nombre: string;
+    descripcion: string | null;
+  }) => {
+    const ok = await categoryMutations.crear(values.nombre, values.descripcion);
+    if (!ok) return;
+    setDialog(null);
+    categories.refetch();
+    setCategoryNotice(`Categoría «${values.nombre}» creada.`);
+  };
+
+  const handleUpdateCategory = async (
+    category: InventoryCategory,
+    values: { nombre: string; descripcion: string | null },
+  ) => {
+    const ok = await categoryMutations.actualizar(
+      Number(category.id),
+      values.nombre,
+      values.descripcion,
+    );
+    if (!ok) return;
+    setDialog(null);
+    categories.refetch();
+
+    if (values.nombre !== category.nombre) {
+      if (categoria === category.nombre) setCategoria(values.nombre);
+      if (unitCategoria === category.nombre) setUnitCategoria(values.nombre);
+      articles.refetch();
+      stats.refetch();
+    }
+    setCategoryNotice(`Categoría «${values.nombre}» actualizada.`);
+  };
+
+  const handleCategorySubmit = (values: {
+    nombre: string;
+    descripcion: string | null;
+  }) => {
+    if (dialog?.mode === "categoryEdit") {
+      void handleUpdateCategory(dialog.category, values);
+    } else if (dialog?.mode === "categoryCreate") {
+      void handleCreateCategory(values);
+    }
+  };
+
+  const handleToggleCategory = async (category: InventoryCategory) => {
+    categoryMutations.clearError();
+    setCategoryNotice(null);
+    if (category.activo === false) {
+      const ok = await categoryMutations.cambiarEstado(Number(category.id), true);
+      if (!ok) return;
+      categories.refetch();
+      setCategoryNotice(`Categoría «${category.nombre}» reactivada.`);
+    } else {
+      setPendingDeactivate(category);
+    }
+  };
+
+  const confirmDeactivate = async () => {
+    if (pendingDeactivate === null) return;
+    const ok = await categoryMutations.cambiarEstado(
+      Number(pendingDeactivate.id),
+      false,
+    );
+    if (!ok) return;
+    setPendingDeactivate(null);
+    categories.refetch();
+    setCategoryNotice(`Categoría «${pendingDeactivate.nombre}» desactivada.`);
+  };
+
+  const anyLoading = articles.status === "loading" || units.status === "loading" || categories.status === "loading" || stats.status === "loading";
+  const anyError = articles.status === "error" || units.status === "error" || categories.status === "error" || stats.status === "error";
+  const errorMessage = articles.error || units.error || categories.error || stats.error || "";
 
   const summary = useMemo(() => {
-    return inventoryArticles.reduce(
+    if (stats.data) {
+      return {
+        units: stats.data.unidades_totales,
+        available: stats.data.unidades_disponibles,
+        loaned: stats.data.unidades_prestadas,
+        registered: stats.data.articulos_registrados,
+      };
+    }
+    return adaptedArticles.reduce(
       (acc, article) => {
-        acc.units +=
-          article.disponible +
-          article.prestado +
-          article.danado +
-          article.faltante;
-
+        acc.units += article.disponible + article.prestado + article.danado + article.faltante;
         acc.available += article.disponible;
         acc.loaned += article.prestado;
-
+        acc.registered += 1;
         return acc;
       },
-      {
-        units: 0,
-        available: 0,
-        loaned: 0,
-      }
+      { units: 0, available: 0, loaned: 0, registered: 0 },
     );
-  }, []);
-
-  // ========================================
-  // FILTROS DE ARTÍCULOS
-  // ========================================
+  }, [stats.data, adaptedArticles]);
 
   const hasActiveFilters =
     query.trim() !== "" ||
@@ -326,7 +565,7 @@ export function InventoryPage() {
 
       return matchesQuery && matchesCategoria && matchesEstado;
     });
-  }, [query, categoria, estado]);
+  }, [inventoryArticles, query, categoria, estado]);
 
   useEffect(() => {
     setPage(1);
@@ -357,7 +596,7 @@ export function InventoryPage() {
   const resultLabel =
     filtered.length === 0
       ? "Sin resultados"
-      : `Mostrando ${from}–${to} de ${filtered.length} ${
+      : `Mostrando ${from}\u2013${to} de ${filtered.length} ${
           filtered.length === 1 ? "artículo" : "artículos"
         }`;
 
@@ -366,10 +605,6 @@ export function InventoryPage() {
     setCategoria("todas");
     setEstado("todos");
   };
-
-  // ========================================
-  // FILTROS DE UNIDADES
-  // ========================================
 
   const hasActiveUnitFilters =
     unitQuery.trim() !== "" ||
@@ -380,7 +615,7 @@ export function InventoryPage() {
     return Array.from(
       new Set(inventoryUnits.map((unit) => unit.categoria))
     ).sort();
-  }, []);
+  }, [inventoryUnits]);
 
   const filteredUnits = useMemo(() => {
     const term = unitQuery.trim().toLowerCase();
@@ -405,7 +640,7 @@ export function InventoryPage() {
         matchesEstado
       );
     });
-  }, [unitQuery, unitCategoria, unitEstado]);
+  }, [inventoryUnits, unitQuery, unitCategoria, unitEstado]);
 
   useEffect(() => {
     setUnitPage(1);
@@ -439,7 +674,7 @@ export function InventoryPage() {
   const unitResultLabel =
     filteredUnits.length === 0
       ? "Sin resultados"
-      : `Mostrando ${unitFrom}–${unitTo} de ${
+      : `Mostrando ${unitFrom}\u2013${unitTo} de ${
           filteredUnits.length
         } ${
           filteredUnits.length === 1
@@ -453,10 +688,6 @@ export function InventoryPage() {
     setUnitEstado("todos");
   };
 
-  // ========================================
-  // FILTROS DE CATEGORÍAS
-  // ========================================
-
   const hasCategoryFilter =
     categoryQuery.trim() !== "";
 
@@ -468,7 +699,7 @@ export function InventoryPage() {
       : inventoryCategories.filter((category) =>
           category.nombre.toLowerCase().includes(term)
         );
-  }, [categoryQuery]);
+  }, [inventoryCategories, categoryQuery]);
 
   const viewCategoryArticles = (
     category: InventoryCategory
@@ -479,9 +710,12 @@ export function InventoryPage() {
     setTab("articulos");
   };
 
-  // ========================================
-  // RENDER PRINCIPAL
-  // ========================================
+  const retryAll = () => {
+    articles.refetch();
+    units.refetch();
+    categories.refetch();
+    stats.refetch();
+  };
 
   return (
     <div
@@ -494,31 +728,28 @@ export function InventoryPage() {
         backgroundImage: `url(${background})`,
       }}
     >
-      {/* ENCABEZADO */}
       <div className="shrink-0">
         <PageHeader
           title="Inventario"
           subtitle="Gestiona los artículos, equipos y existencias del almacén"
           meta={
-            DEMO_MODE && (
-              <span
-                className="
-                  inline-flex h-8 items-center gap-2
-                  rounded-full border border-white/80
-                  bg-white/90 px-3
-                  text-[11px] font-medium
-                  text-[#405783] shadow-sm
-                "
-              >
-                <span className="h-1.5 w-1.5 rounded-full bg-[#267BFA]" />
-                Vista de demostración
-              </span>
-            )
+            <span
+              className="
+                inline-flex h-8 items-center gap-2
+                rounded-full border border-white/80
+                bg-white/90 px-3
+                text-[11px] font-medium
+                text-[#405783] shadow-sm
+              "
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-[#F59B22]" />
+              Los cambios se guardarán al habilitar el registro de datos
+            </span>
           }
           action={
             <Button
               variant="sidebar"
-              onClick={() => setDialog({ mode: "create" })}
+              onClick={openArticleCreate}
             >
               <Plus className="h-4 w-4" />
               Nuevo artículo
@@ -527,7 +758,6 @@ export function InventoryPage() {
         />
       </div>
 
-      {/* CONTENIDO */}
       <main
         className="
           min-h-0 min-w-0 flex-1
@@ -542,10 +772,6 @@ export function InventoryPage() {
             flex-col gap-3
           "
         >
-          {/* =====================================
-              TARJETAS DE RESUMEN
-          ===================================== */}
-
           <section
             aria-label="Resumen del inventario"
             className="
@@ -555,7 +781,7 @@ export function InventoryPage() {
             "
           >
             <InventoryStatCard
-              value={inventoryArticles.length}
+              value={summary.registered}
               label="Artículos registrados"
               description="Tipos de artículos en inventario"
               accent="blue"
@@ -587,10 +813,6 @@ export function InventoryPage() {
             />
           </section>
 
-          {/* =====================================
-              PANEL PRINCIPAL DE INVENTARIO
-          ===================================== */}
-
           <section
             className="
               min-w-0 overflow-hidden
@@ -601,185 +823,242 @@ export function InventoryPage() {
               backdrop-blur-md
             "
           >
-            {/* PESTAÑAS */}
             <InventoryTabs
               value={tab}
               onChange={setTab}
             />
 
-            {/* =================================
-                ARTÍCULOS
-            ================================= */}
+            {anyError && !anyLoading ? (
+              <ErrorBanner message={errorMessage} onRetry={retryAll} />
+            ) : (
+              <>
+                {tab === "articulos" && (
+                  <div
+                    role="tabpanel"
+                    id="inv-panel-articulos"
+                    aria-labelledby="inv-tab-articulos"
+                  >
+                    {articleNotice !== null && (
+                      <div
+                        role="status"
+                        className="
+                          flex items-center gap-2
+                          border-b border-[#CDEBDD]
+                          bg-[#EAF9F2]
+                          px-4 py-2
+                          text-[12px] font-medium
+                          text-[#0F7B54]
+                        "
+                      >
+                        <CircleCheck className="h-4 w-4 shrink-0" />
+                        {articleNotice}
+                      </div>
+                    )}
 
-            {tab === "articulos" && (
-              <div
-                role="tabpanel"
-                id="inv-panel-articulos"
-                aria-labelledby="inv-tab-articulos"
-              >
-                <InventoryToolbar
-                  query={query}
-                  onQuery={setQuery}
-                  categoria={categoria}
-                  onCategoria={setCategoria}
-                  estado={estado}
-                  onEstado={setEstado}
-                  categorias={inventoryCategoryNames}
-                  hasActiveFilters={hasActiveFilters}
-                  onClear={clearFilters}
-                />
+                    <InventoryToolbar
+                      query={query}
+                      onQuery={setQuery}
+                      categoria={categoria}
+                      onCategoria={setCategoria}
+                      estado={estado}
+                      onEstado={setEstado}
+                      categorias={inventoryCategoryNames}
+                      hasActiveFilters={hasActiveFilters}
+                      onClear={clearFilters}
+                    />
 
-                <InventoryTable
-                  items={pageItems}
-                  filtered={hasActiveFilters}
-                  activeCategory={
-                    categoria !== "todas"
-                      ? categoria
-                      : null
-                  }
-                  onClear={clearFilters}
-                  onEdit={(article) =>
-                    setDialog({
-                      mode: "edit",
-                      article,
-                    })
-                  }
-                  onDetails={(article) =>
-                    setDialog({
-                      mode: "details",
-                      article,
-                    })
-                  }
-                />
+                    {articles.status === "loading" ? (
+                      <LoadingOverlay />
+                    ) : articles.status === "error" ? (
+                      <ErrorBanner message={articles.error || ""} onRetry={articles.refetch} />
+                    ) : (
+                      <>
+                        <InventoryTable
+                          items={pageItems}
+                          filtered={hasActiveFilters}
+                          activeCategory={
+                            categoria !== "todas"
+                              ? categoria
+                              : null
+                          }
+                          onClear={clearFilters}
+                          onEdit={openArticleEdit}
+                          onDetails={(article) =>
+                            setDialog({
+                              mode: "details",
+                              article,
+                            })
+                          }
+                        />
 
-                <InventoryPagePagination
-                  currentPage={safePage}
-                  totalPages={totalPages}
-                  resultLabel={resultLabel}
-                  onPrevious={() =>
-                    setPage((value) =>
-                      Math.max(1, value - 1)
-                    )
-                  }
-                  onNext={() =>
-                    setPage((value) =>
-                      Math.min(totalPages, value + 1)
-                    )
-                  }
-                />
-              </div>
-            )}
+                        <InventoryPagePagination
+                          currentPage={safePage}
+                          totalPages={totalPages}
+                          resultLabel={resultLabel}
+                          onPrevious={() =>
+                            setPage((value) =>
+                              Math.max(1, value - 1)
+                            )
+                          }
+                          onNext={() =>
+                            setPage((value) =>
+                              Math.min(totalPages, value + 1)
+                            )
+                          }
+                        />
+                      </>
+                    )}
+                  </div>
+                )}
 
-            {/* =================================
-                UNIDADES
-            ================================= */}
+                {tab === "unidades" && (
+                  <div
+                    role="tabpanel"
+                    id="inv-panel-unidades"
+                    aria-labelledby="inv-tab-unidades"
+                  >
+                    <UnitsToolbar
+                      query={unitQuery}
+                      onQuery={setUnitQuery}
+                      categoria={unitCategoria}
+                      onCategoria={setUnitCategoria}
+                      estado={unitEstado}
+                      onEstado={setUnitEstado}
+                      categorias={unitCategories}
+                      hasActiveFilters={hasActiveUnitFilters}
+                      onClear={clearUnitFilters}
+                    />
 
-            {tab === "unidades" && (
-              <div
-                role="tabpanel"
-                id="inv-panel-unidades"
-                aria-labelledby="inv-tab-unidades"
-              >
-                <UnitsToolbar
-                  query={unitQuery}
-                  onQuery={setUnitQuery}
-                  categoria={unitCategoria}
-                  onCategoria={setUnitCategoria}
-                  estado={unitEstado}
-                  onEstado={setUnitEstado}
-                  categorias={unitCategories}
-                  hasActiveFilters={hasActiveUnitFilters}
-                  onClear={clearUnitFilters}
-                />
+                    {units.status === "loading" ? (
+                      <LoadingOverlay />
+                    ) : units.status === "error" ? (
+                      <ErrorBanner message={units.error || ""} onRetry={units.refetch} />
+                    ) : (
+                      <>
+                        <UnitsTable
+                          items={unitItems}
+                          filtered={hasActiveUnitFilters}
+                          onClear={clearUnitFilters}
+                          onDetails={(unit) =>
+                            setDialog({
+                              mode: "unitDetails",
+                              unit,
+                            })
+                          }
+                        />
 
-                <UnitsTable
-                  items={unitItems}
-                  filtered={hasActiveUnitFilters}
-                  onClear={clearUnitFilters}
-                  onDetails={(unit) =>
-                    setDialog({
-                      mode: "unitDetails",
-                      unit,
-                    })
-                  }
-                />
+                        <InventoryPagePagination
+                          currentPage={unitSafePage}
+                          totalPages={unitTotalPages}
+                          resultLabel={unitResultLabel}
+                          onPrevious={() =>
+                            setUnitPage((value) =>
+                              Math.max(1, value - 1)
+                            )
+                          }
+                          onNext={() =>
+                            setUnitPage((value) =>
+                              Math.min(unitTotalPages, value + 1)
+                            )
+                          }
+                          unit
+                        />
+                      </>
+                    )}
+                  </div>
+                )}
 
-                <InventoryPagePagination
-                  currentPage={unitSafePage}
-                  totalPages={unitTotalPages}
-                  resultLabel={unitResultLabel}
-                  onPrevious={() =>
-                    setUnitPage((value) =>
-                      Math.max(1, value - 1)
-                    )
-                  }
-                  onNext={() =>
-                    setUnitPage((value) =>
-                      Math.min(unitTotalPages, value + 1)
-                    )
-                  }
-                  unit
-                />
-              </div>
-            )}
+                {tab === "categorias" && (
+                  <div
+                    role="tabpanel"
+                    id="inv-panel-categorias"
+                    aria-labelledby="inv-tab-categorias"
+                  >
+                    <div
+                      className="
+                        border-b border-[#E9EEF6]
+                        px-4 py-3
+                      "
+                    >
+                      <CategoriesToolbar
+                        query={categoryQuery}
+                        onQuery={setCategoryQuery}
+                        resultCount={filteredCategories.length}
+                        totalCount={inventoryCategories.length}
+                        onNew={openCategoryCreate}
+                      />
+                    </div>
 
-            {/* =================================
-                CATEGORÍAS
-            ================================= */}
+                    {categoryNotice !== null && (
+                      <div
+                        role="status"
+                        className="
+                          flex items-center gap-2
+                          border-b border-[#CDEBDD]
+                          bg-[#EAF9F2]
+                          px-4 py-2
+                          text-[12px] font-medium
+                          text-[#0F7B54]
+                        "
+                      >
+                        <CircleCheck className="h-4 w-4 shrink-0" />
+                        {categoryNotice}
+                      </div>
+                    )}
 
-            {tab === "categorias" && (
-              <div
-                role="tabpanel"
-                id="inv-panel-categorias"
-                aria-labelledby="inv-tab-categorias"
-              >
-                <div
-                  className="
-                    border-b border-[#E9EEF6]
-                    px-4 py-3
-                  "
-                >
-                  <CategoriesToolbar
-                    query={categoryQuery}
-                    onQuery={setCategoryQuery}
-                    resultCount={filteredCategories.length}
-                    totalCount={inventoryCategories.length}
-                    onNew={() =>
-                      setDialog({
-                        mode: "categoryCreate",
-                      })
-                    }
-                  />
-                </div>
+                    {categoryMutations.error !== null &&
+                      !isCategoryDialogOpen &&
+                      pendingDeactivate === null && (
+                        <div
+                          role="alert"
+                          className="
+                            flex items-center gap-2
+                            border-b border-[#F3C9CC]
+                            bg-[#FDECEE]
+                            px-4 py-2
+                            text-[12px] font-medium
+                            text-[#B23540]
+                          "
+                        >
+                          <AlertCircle className="h-4 w-4 shrink-0" />
+                          <span className="min-w-0 flex-1 truncate">
+                            {categoryMutations.error}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={categoryMutations.clearError}
+                            className="shrink-0 rounded px-2 py-0.5 text-[11px] font-semibold text-[#B23540] hover:bg-[#F9DDE0]"
+                          >
+                            Cerrar
+                          </button>
+                        </div>
+                      )}
 
-                <CategoriesTable
-                  items={filteredCategories}
-                  filtered={hasCategoryFilter}
-                  onClear={() =>
-                    setCategoryQuery("")
-                  }
-                  onNew={() =>
-                    setDialog({
-                      mode: "categoryCreate",
-                    })
-                  }
-                  onViewArticles={viewCategoryArticles}
-                  onEdit={(category) =>
-                    setDialog({
-                      mode: "categoryEdit",
-                      category,
-                    })
-                  }
-                />
-              </div>
+                    {categories.status === "loading" ? (
+                      <LoadingOverlay />
+                    ) : categories.status === "error" ? (
+                      <ErrorBanner message={categories.error || ""} onRetry={categories.refetch} />
+                    ) : (
+                      <CategoriesTable
+                        items={filteredCategories}
+                        filtered={hasCategoryFilter}
+                        busy={categoryMutations.saving}
+                        onClear={() =>
+                          setCategoryQuery("")
+                        }
+                        onNew={openCategoryCreate}
+                        onViewArticles={viewCategoryArticles}
+                        onEdit={openCategoryEdit}
+                        onToggleActive={handleToggleCategory}
+                      />
+                    )}
+                  </div>
+                )}
+              </>
             )}
           </section>
         </div>
       </main>
-
-      {/* =====================================
-          MODALES
-      ===================================== */}
 
       {(dialog?.mode === "create" ||
         dialog?.mode === "edit") && (
@@ -799,11 +1078,12 @@ export function InventoryPage() {
                 )
               : []
           }
-          categorias={inventoryCategoryNames}
-          existingNames={inventoryArticles.map(
-            (article) => article.nombre
-          )}
+          categorias={articleCategoryOptions}
+          existingArticles={existingArticles}
+          saving={articleMutations.saving}
+          serverError={articleMutations.error}
           onClose={() => setDialog(null)}
+          onSubmit={handleArticleSubmit}
         />
       )}
 
@@ -844,8 +1124,66 @@ export function InventoryPage() {
           existingNames={inventoryCategories.map(
             (category) => category.nombre
           )}
+          saving={categoryMutations.saving}
+          serverError={categoryMutations.error}
           onClose={() => setDialog(null)}
+          onSubmit={handleCategorySubmit}
         />
+      )}
+
+      {pendingDeactivate !== null && (
+        <Dialog
+          open
+          onClose={() => {
+            if (!categoryMutations.saving) setPendingDeactivate(null);
+          }}
+          title="Desactivar categoría"
+          subtitle="La categoría dejará de estar disponible para nuevos registros."
+          size="sm"
+          footer={
+            <>
+              <Button
+                variant="secondary"
+                disabled={categoryMutations.saving}
+                onClick={() => setPendingDeactivate(null)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={categoryMutations.saving}
+                onClick={() => void confirmDeactivate()}
+              >
+                {categoryMutations.saving ? "Desactivando…" : "Desactivar"}
+              </Button>
+            </>
+          }
+        >
+          <p className="text-[13px] leading-6 text-[#435F92]">
+            ¿Seguro que quieres desactivar la categoría
+            <strong className="text-[#1D3155]"> «{pendingDeactivate.nombre}»</strong>?
+          </p>
+          <p className="mt-2 text-[12px] leading-5 text-[#7385A4]">
+            No se elimina ni se modifica ningún artículo. Solo dejará de
+            aparecer como opción al registrar artículos nuevos.
+            {pendingDeactivate.articulos > 0 && (
+              <>
+                {" "}Actualmente agrupa {pendingDeactivate.articulos}{" "}
+                {pendingDeactivate.articulos === 1 ? "artículo" : "artículos"}.
+              </>
+            )}
+          </p>
+
+          {categoryMutations.error !== null && (
+            <p
+              role="alert"
+              className="mt-3 flex items-start gap-1.5 text-[12px] text-[#B23540]"
+            >
+              <AlertCircle className="mt-px h-3.5 w-3.5 shrink-0" />
+              <span>{categoryMutations.error}</span>
+            </p>
+          )}
+        </Dialog>
       )}
     </div>
   );

@@ -73,7 +73,7 @@ export const demoStudentLoans: StudentLoan[] = [
   { id: "l06", folio: "PRE-2026-000010", studentId: "s05", fecha: "2026-10-05", fechaLimite: null, estado: "Anulado", unidades: 1 },
   { id: "l07", folio: "PRE-2026-000009", studentId: "s06", fecha: "2026-10-03", fechaLimite: null, estado: "Cerrado", unidades: 2 },
   { id: "l08", folio: "PRE-2026-000008", studentId: "s09", fecha: "2026-10-01", fechaLimite: null, estado: "Cerrado", unidades: 3 },
-  { id: "l09", folio: "PRE-2026-000006", studentId: "s01", fecha: "2026-09-20", fechaLimite: "2026-09-27", estado: "Cerrado", unidades: 2 },
+  { id: "l09", folio: "PRE-2026-000006", studentId: "s01", fecha: "2026-09-20", fechaLimite: null, estado: "Cerrado", unidades: 2 },
   { id: "l10", folio: "PRE-2026-000004", studentId: "s07", fecha: "2026-09-15", fechaLimite: null, estado: "Cerrado", unidades: 1 },
 ];
 
