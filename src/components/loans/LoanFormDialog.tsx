@@ -1,492 +1,315 @@
-
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
-
-import {
-  CalendarDays,
-  CheckCircle2,
-  GraduationCap,
-  Info,
-  Minus,
-  Package,
-  PackagePlus,
-  Plus,
-  Search,
-  Trash2,
-  UserRound,
-  X,
-} from "lucide-react";
-
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AlertCircle, CalendarDays, Info, ListChecks } from "lucide-react";
 import { Dialog } from "../ui/Dialog";
 import { Button } from "../ui/Button";
-
-import { studentsWithSummary } from "../../data/demoStudents";
-
-import {
-  inventoryArticles,
-  type InventoryArticle,
-} from "../../data/inventoryData";
+import { SectionTitle } from "./SectionTitle";
+import { LoanStudentField } from "./LoanStudentField";
+import { LoanArticleField, type SelectedArticle } from "./LoanArticleField";
+import { loanInputClass } from "./formStyles";
+import type { StudentSummary } from "../../types/students";
+import type {
+  LoanInventorySource,
+  LoanStudentSource,
+} from "../../types/loansForm";
+import type {
+  LineaPrestamoInput,
+  RegistrarPrestamoArgs,
+} from "../../services/loans";
 
 interface LoanFormDialogProps {
   open: boolean;
+  students: LoanStudentSource;
+  inventory: LoanInventorySource;
+  saving: boolean;
+  serverError: string | null;
   onClose: () => void;
-}
-
-interface SelectedArticle {
-  id: InventoryArticle["id"];
-  cantidad: number;
+  onSubmit: (datos: RegistrarPrestamoArgs) => void;
 }
 
 const NOTA_MAX = 200;
 
-const inputClass = `
-  h-10 w-full rounded-[10px]
-  border border-[#DFE7F2]
-  bg-white px-3
-  text-[12px] text-[#2A4061]
-  placeholder:text-[#9AA8BC]
-  outline-none
-  transition-[border-color,box-shadow] duration-200
-  hover:border-[#BAD0EC]
-  focus:border-[#398BFF]
-  focus:ring-2 focus:ring-[#398BFF]/10
-`;
-
-function normalizeText(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim();
+/** Fecha local de hoy en `YYYY-MM-DD`, comparable con un `<input type="date">`. */
+function hoy(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
-
-function initials(
-  nombres: string,
-  apellidos: string
-): string {
-  return `${nombres.trim().charAt(0)}${apellidos
-    .trim()
-    .charAt(0)}`.toUpperCase();
-}
-
-function SectionTitle({
-  icon,
-  title,
-  description,
-}: {
-  icon: ReactNode;
-  title: string;
-  description?: string;
-}) {
-  return (
-    <div className="flex items-center gap-2.5">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-[#EAF3FF] text-[#287FF0]">
-        {icon}
-      </div>
-
-      <div className="min-w-0">
-        <h3 className="text-[12.5px] font-semibold text-[#253D61]">
-          {title}
-        </h3>
-
-        {description && (
-          <p className="mt-0.5 text-[10.5px] leading-4 text-[#8293AA]">
-            {description}
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ========================================
-// CONTROL DE CANTIDAD EDITABLE
-// ========================================
-
-function QuantityEditor({
-  value,
-  max,
-  articleName,
-  onChange,
-}: {
-  value: number;
-  max: number;
-  articleName: string;
-  onChange: (value: number) => void;
-}) {
-  const [draft, setDraft] = useState(String(value));
-
-  useEffect(() => {
-    setDraft(String(value));
-  }, [value]);
-
-  const commit = () => {
-    const parsed = Number(draft);
-
-    const next =
-      draft.trim() === "" || !Number.isFinite(parsed)
-        ? 1
-        : Math.min(
-            Math.max(1, Math.trunc(parsed)),
-            Math.max(1, max)
-          );
-
-    setDraft(String(next));
-    onChange(next);
-  };
-
-  return (
-    <div
-      className="
-        flex shrink-0 items-center gap-1
-        rounded-[10px]
-        border border-[#DFE7F2]
-        bg-white p-1
-        transition-colors duration-200
-        focus-within:border-[#398BFF]
-        focus-within:ring-2
-        focus-within:ring-[#398BFF]/10
-      "
-    >
-      <button
-        type="button"
-        aria-label={`Restar una unidad de ${articleName}`}
-        disabled={value <= 1}
-        onClick={() => onChange(value - 1)}
-        className="
-          flex h-7 w-7 items-center justify-center
-          rounded-md text-[#617794]
-          hover:bg-[#EDF5FF] hover:text-[#287FF0]
-          disabled:cursor-not-allowed disabled:opacity-30
-        "
-      >
-        <Minus className="h-3.5 w-3.5" />
-      </button>
-
-      <input
-        type="text"
-        inputMode="numeric"
-        pattern="[0-9]*"
-        value={draft}
-        onChange={(event) => {
-          const next = event.target.value;
-
-          if (/^\d*$/.test(next)) {
-            setDraft(next);
-          }
-        }}
-        onBlur={commit}
-        onKeyDown={(event) => {
-          if (event.key === "Enter") {
-            event.preventDefault();
-            event.currentTarget.blur();
-          }
-        }}
-        onFocus={(event) => {
-          event.currentTarget.select();
-        }}
-        aria-label={`Cantidad de ${articleName}`}
-        title={`Introduce una cantidad entre 1 y ${max}`}
-        className="
-          h-7 w-12 rounded-md
-          bg-transparent px-1
-          text-center text-[12px] font-semibold
-          tabular-nums text-[#283F61]
-          outline-none
-        "
-      />
-
-      <button
-        type="button"
-        aria-label={`Sumar una unidad de ${articleName}`}
-        disabled={value >= max}
-        onClick={() => onChange(value + 1)}
-        className="
-          flex h-7 w-7 items-center justify-center
-          rounded-md text-[#617794]
-          hover:bg-[#EDF5FF] hover:text-[#287FF0]
-          disabled:cursor-not-allowed disabled:opacity-30
-        "
-      >
-        <Plus className="h-3.5 w-3.5" />
-      </button>
-    </div>
-  );
-}
-
-// ========================================
-// MODAL NUEVO PRÉSTAMO
-// ========================================
 
 export function LoanFormDialog({
   open,
+  students,
+  inventory,
+  saving,
+  serverError,
   onClose,
+  onSubmit,
 }: LoanFormDialogProps) {
-  const [studentQuery, setStudentQuery] = useState("");
-  const [selectedStudentId, setSelectedStudentId] =
-    useState<string | null>(null);
-  const [studentSearchOpen, setStudentSearchOpen] =
-    useState(false);
-
-  const [articleQuery, setArticleQuery] = useState("");
-  const [articleSearchOpen, setArticleSearchOpen] =
-    useState(false);
-  const [selectedArticles, setSelectedArticles] = useState<
-    SelectedArticle[]
-  >([]);
-
+  const [selectedStudent, setSelectedStudent] = useState<StudentSummary | null>(
+    null,
+  );
+  const [selectedArticles, setSelectedArticles] = useState<SelectedArticle[]>(
+    [],
+  );
   const [deadline, setDeadline] = useState("");
   const [note, setNote] = useState("");
+  const [confirming, setConfirming] = useState(false);
 
-  const studentSearchRef = useRef<HTMLDivElement>(null);
-  const articleSearchRef = useRef<HTMLDivElement>(null);
   const studentInputRef = useRef<HTMLInputElement>(null);
-
-  // ========================================
-  // REINICIAR AL ABRIR
-  // ========================================
+  const today = hoy();
 
   useEffect(() => {
     if (!open) return;
 
-    setStudentQuery("");
-    setSelectedStudentId(null);
-    setStudentSearchOpen(false);
-
-    setArticleQuery("");
-    setArticleSearchOpen(false);
+    setSelectedStudent(null);
     setSelectedArticles([]);
-
     setDeadline("");
     setNote("");
+    setConfirming(false);
   }, [open]);
 
-  // ========================================
-  // CERRAR BUSCADORES AL HACER CLIC FUERA
-  // ========================================
+  const articleById = useMemo(
+    () => new Map(inventory.articles.map((article) => [article.id, article])),
+    [inventory.articles],
+  );
 
-  useEffect(() => {
-    if (!open) return;
-
-    const handlePointerDown = (event: PointerEvent) => {
-      const target = event.target as Node;
-
-      if (
-        studentSearchRef.current &&
-        !studentSearchRef.current.contains(target)
-      ) {
-        setStudentSearchOpen(false);
-      }
-
-      if (
-        articleSearchRef.current &&
-        !articleSearchRef.current.contains(target)
-      ) {
-        setArticleSearchOpen(false);
-      }
-    };
-
-    document.addEventListener(
-      "pointerdown",
-      handlePointerDown
-    );
-
-    return () => {
-      document.removeEventListener(
-        "pointerdown",
-        handlePointerDown
-      );
-    };
-  }, [open]);
-
-  // ========================================
-  // ESTUDIANTE SELECCIONADO
-  // ========================================
-
-  const selectedStudent = useMemo(() => {
-    return (
-      studentsWithSummary.find(
-        (student) =>
-          String(student.id) === selectedStudentId
-      ) ?? null
-    );
-  }, [selectedStudentId]);
-
-  // ========================================
-  // BUSCADOR DE ESTUDIANTES
-  // ========================================
-
-  const studentResults = useMemo(() => {
-    const term = normalizeText(studentQuery);
-
-    return studentsWithSummary
-      .filter((student) => {
-        if (!student.activo) return false;
-
-        if (!term) return true;
-
-        return (
-          normalizeText(student.nombreCompleto).includes(
-            term
-          ) ||
-          normalizeText(
-            student.codigoUniversitario
-          ).includes(term)
-        );
-      })
-      .slice(0, 8);
-  }, [studentQuery]);
-
-  // ========================================
-  // BUSCADOR DE ARTÍCULOS
-  // ========================================
-
-  const articleResults = useMemo(() => {
-    const term = normalizeText(articleQuery);
-
-    return inventoryArticles
-      .filter((article) => {
-        if (!article.prestable) return false;
-
-        const alreadySelected = selectedArticles.some(
-          (selected) => selected.id === article.id
-        );
-
-        if (alreadySelected) return false;
-
-        if (!term) return true;
-
-        return (
-          normalizeText(article.nombre).includes(term) ||
-          normalizeText(article.codigo ?? "").includes(
-            term
-          )
-        );
-      })
-      .slice(0, 8);
-  }, [articleQuery, selectedArticles]);
-
-  // ========================================
-  // ACCIONES DE ESTUDIANTES
-  // ========================================
-
-  const selectStudent = (id: string) => {
-    setSelectedStudentId(id);
-    setStudentQuery("");
-    setStudentSearchOpen(false);
-  };
-
-  const clearStudent = () => {
-    setSelectedStudentId(null);
-    setStudentQuery("");
-    setStudentSearchOpen(false);
-
-    window.requestAnimationFrame(() => {
-      studentInputRef.current?.focus();
-    });
-  };
-
-  // ========================================
-  // ACCIONES DE ARTÍCULOS
-  // ========================================
-
-  const addArticle = (id: InventoryArticle["id"]) => {
-    const article = inventoryArticles.find(
-      (item) => item.id === id
-    );
-
-    if (
-      !article ||
-      !article.prestable ||
-      article.disponible <= 0
-    ) {
-      return;
-    }
-
-    setSelectedArticles((previous) => {
-      if (previous.some((item) => item.id === id)) {
-        return previous;
-      }
-
-      return [
-        ...previous,
-        {
-          id,
-          cantidad: 1,
-        },
-      ];
-    });
-
-    setArticleQuery("");
-    setArticleSearchOpen(false);
-  };
-
-  const removeArticle = (id: InventoryArticle["id"]) => {
-    setSelectedArticles((previous) =>
-      previous.filter((item) => item.id !== id)
-    );
-  };
-
-  const updateQuantity = (
-    id: InventoryArticle["id"],
-    quantity: number
-  ) => {
-    const article = inventoryArticles.find(
-      (item) => item.id === id
-    );
-
-    if (!article) return;
-
-    const max = Math.max(1, article.disponible);
-
-    const next = Math.min(
-      max,
-      Math.max(1, Math.trunc(quantity))
-    );
-
-    setSelectedArticles((previous) =>
-      previous.map((item) =>
-        item.id === id
-          ? { ...item, cantidad: next }
-          : item
-      )
-    );
-  };
-
-  // ========================================
-  // RESUMEN
-  // ========================================
-
-  const totalUnits = selectedArticles.reduce(
-    (sum, item) => sum + item.cantidad,
-    0
+  const unitById = useMemo(
+    () => new Map(inventory.units.map((unit) => [unit.id, unit])),
+    [inventory.units],
   );
 
   // ========================================
-  // RENDER
+  // VALIDACIÓN
+  // ========================================
+
+  const sinEstudiante = selectedStudent === null;
+  const sinArticulos = selectedArticles.length === 0;
+
+  const lineaInvalida = selectedArticles.some((selected) => {
+    const article = articleById.get(selected.articuloId);
+    if (!article) return true;
+
+    if (article.control_individual) {
+      return selected.unidadIds.length === 0;
+    }
+
+    return (
+      selected.cantidad < 1 || selected.cantidad > article.cantidad_disponible
+    );
+  });
+
+  const fechaInvalida = deadline !== "" && deadline < today;
+
+  const puedeRegistrar =
+    !saving && !sinEstudiante && !sinArticulos && !lineaInvalida && !fechaInvalida;
+
+  const motivo = sinEstudiante
+    ? "Selecciona el estudiante responsable del préstamo."
+    : sinArticulos
+      ? "Agrega al menos un artículo al préstamo."
+      : lineaInvalida
+        ? "Completa las unidades o cantidades de cada artículo."
+        : fechaInvalida
+          ? "La fecha límite no puede ser anterior a hoy."
+          : null;
+
+  const lineas: LineaPrestamoInput[] = selectedArticles.map((selected) => {
+    const article = articleById.get(selected.articuloId);
+
+    if (article?.control_individual) {
+      return {
+        articulo_id: selected.articuloId,
+        unidad_ids: selected.unidadIds,
+      };
+    }
+
+    return { articulo_id: selected.articuloId, cantidad: selected.cantidad };
+  });
+
+  const totalUnits = selectedArticles.reduce(
+    (total, selected) =>
+      selected.unidadIds.length > 0
+        ? total + selected.unidadIds.length
+        : total + selected.cantidad,
+    0,
+  );
+
+  const confirmar = () => {
+    if (!puedeRegistrar || selectedStudent === null) return;
+
+    onSubmit({
+      estudiante_id: Number(selectedStudent.id),
+      lineas,
+      fecha_limite: deadline === "" ? null : deadline,
+      comentario: note.trim() === "" ? null : note.trim(),
+    });
+  };
+
+  // ========================================
+  // PASO DE CONFIRMACIÓN
+  // ========================================
+
+  if (confirming && selectedStudent !== null) {
+    return (
+      <Dialog
+        open={open}
+        onClose={() => {
+          if (!saving) setConfirming(false);
+        }}
+        title="Confirmar préstamo"
+        subtitle="Revisa los datos antes de guardar la entrega."
+        size="lg"
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              disabled={saving}
+              onClick={() => setConfirming(false)}
+            >
+              Volver
+            </Button>
+
+            <Button disabled={saving} onClick={confirmar}>
+              {saving ? "Registrando…" : "Confirmar y registrar"}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="rounded-xl border border-[#E4ECF7] bg-[#F8FAFE] px-3.5 py-3">
+            <p className="text-[11.5px] font-semibold text-[#405676]">
+              Estudiante responsable
+            </p>
+
+            <p className="mt-1 text-[12.5px] font-semibold text-[#253B5D]">
+              {selectedStudent.nombreCompleto}
+            </p>
+
+            <p className="mt-0.5 font-mono text-[11px] text-[#8797AE]">
+              {selectedStudent.codigoUniversitario}
+            </p>
+          </div>
+
+          <div className="overflow-hidden rounded-xl border border-[#E4ECF7]">
+            <div className="border-b border-[#E9EEF6] bg-[#F8FAFE] px-3.5 py-2.5 text-[11.5px] font-semibold text-[#405676]">
+              Artículos ({selectedArticles.length} tipos)
+            </div>
+
+            <ul className="divide-y divide-[#E9EEF6]">
+              {selectedArticles.map((selected) => {
+                const article = articleById.get(selected.articuloId);
+                if (!article) return null;
+
+                const codigos = selected.unidadIds
+                  .map((id) => unitById.get(id)?.codigo)
+                  .filter((codigo): codigo is string => Boolean(codigo));
+
+                return (
+                  <li
+                    key={selected.articuloId}
+                    className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-[12px] font-semibold text-[#253B5D]">
+                        {article.nombre}
+                      </p>
+
+                      {article.control_individual && codigos.length > 0 && (
+                        <p className="mt-0.5 font-mono text-[10.5px] text-[#6A4FC4]">
+                          {codigos.join(", ")}
+                        </p>
+                      )}
+                    </div>
+
+                    <span className="shrink-0 rounded-lg bg-[#EAF2FF] px-2.5 py-1 text-[10.5px] font-semibold tabular-nums text-[#3478D5]">
+                      {article.control_individual
+                        ? `${selected.unidadIds.length} ${
+                            selected.unidadIds.length === 1
+                              ? "unidad"
+                              : "unidades"
+                          }`
+                        : `${selected.cantidad} ${
+                            selected.cantidad === 1 ? "unidad" : "unidades"
+                          }`}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-xl border border-[#E4ECF7] bg-white px-3.5 py-3">
+              <p className="text-[11.5px] font-semibold text-[#405676]">
+                Fecha límite
+              </p>
+
+              <p className="mt-1 text-[12.5px] text-[#253B5D]">
+                {deadline === "" ? "Sin fecha límite" : deadline}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-[#E4ECF7] bg-white px-3.5 py-3">
+              <p className="text-[11.5px] font-semibold text-[#405676]">
+                Total de unidades
+              </p>
+
+              <p className="mt-1 text-[12.5px] font-bold tabular-nums text-[#267BF0]">
+                {totalUnits}
+              </p>
+            </div>
+          </div>
+
+          {note.trim() !== "" && (
+            <div className="rounded-xl border border-[#E4ECF7] bg-white px-3.5 py-3">
+              <p className="text-[11.5px] font-semibold text-[#405676]">
+                Observaciones
+              </p>
+
+              <p className="mt-1 whitespace-pre-line text-[12px] leading-5 text-[#435F92]">
+                {note.trim()}
+              </p>
+            </div>
+          )}
+
+          {serverError !== null && (
+            <p
+              role="alert"
+              className="flex items-start gap-2 rounded-xl border border-[#F3C9CC] bg-[#FDECEE] px-3.5 py-2.5 text-[12px] font-medium text-[#B23540]"
+            >
+              <AlertCircle className="mt-px h-4 w-4 shrink-0" />
+              <span>{serverError}</span>
+            </p>
+          )}
+        </div>
+      </Dialog>
+    );
+  }
+
+  // ========================================
+  // PASO DE FORMULARIO
   // ========================================
 
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={saving ? () => undefined : onClose}
       title="Nuevo préstamo"
       subtitle="Prepara una entrega de artículos a un estudiante."
       size="xl"
       initialFocusRef={studentInputRef}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="secondary" disabled={saving} onClick={onClose}>
             Cancelar
           </Button>
 
-          <span title="Vista de demostración: todavía no se guardan préstamos">
-            <Button disabled>
+          <span title={motivo ?? undefined}>
+            <Button
+              disabled={!puedeRegistrar}
+              onClick={() => setConfirming(true)}
+            >
               Registrar préstamo
             </Button>
           </span>
@@ -494,411 +317,28 @@ export function LoanFormDialog({
       }
     >
       <div className="space-y-4">
-        {/* =====================================
-            ESTUDIANTE RESPONSABLE
-        ===================================== */}
-
-        <section>
-          <SectionTitle
-            icon={
-              <GraduationCap className="h-[17px] w-[17px]" />
-            }
-            title="Responsable del préstamo"
-            description="Busca al estudiante que recibirá los artículos."
-          />
-
-          <div
-            ref={studentSearchRef}
-            className="relative mt-3"
-          >
-            <label
-              htmlFor="loan-student-search"
-              className="mb-1.5 block text-[11.5px] font-semibold text-[#455875]"
-            >
-              Estudiante responsable
-              <span className="ml-1 text-[#E05B67]">
-                *
-              </span>
-            </label>
-
-            {selectedStudent ? (
-              <div className="flex min-h-[54px] items-center gap-3 rounded-xl border border-[#CFE2FF] bg-[#F2F7FF] px-3 py-2">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#DFECFF] text-[12px] font-bold text-[#347AD7]">
-                  {initials(
-                    selectedStudent.nombres,
-                    selectedStudent.apellidos
-                  )}
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[12px] font-semibold text-[#233A5D]">
-                    {selectedStudent.nombreCompleto}
-                  </p>
-
-                  <p className="mt-0.5 font-mono text-[10.5px] text-[#6882A6]">
-                    {selectedStudent.codigoUniversitario}
-                  </p>
-                </div>
-
-                <CheckCircle2 className="h-[17px] w-[17px] shrink-0 text-[#20AE73]" />
-
-                <button
-                  type="button"
-                  onClick={clearStudent}
-                  aria-label="Cambiar estudiante"
-                  title="Cambiar estudiante"
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#7890B0] hover:bg-white hover:text-[#D65367]"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            ) : (
-              <>
-                <div className="relative">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-[17px] w-[17px] -translate-y-1/2 text-[#8C9BB2]" />
-
-                  <input
-                    ref={studentInputRef}
-                    id="loan-student-search"
-                    type="search"
-                    role="combobox"
-                    aria-expanded={studentSearchOpen}
-                    aria-controls="loan-student-results"
-                    aria-autocomplete="list"
-                    autoComplete="off"
-                    value={studentQuery}
-                    onChange={(event) => {
-                      setStudentQuery(event.target.value);
-                      setStudentSearchOpen(true);
-                    }}
-                    onFocus={() =>
-                      setStudentSearchOpen(true)
-                    }
-                    onKeyDown={(event) => {
-                      if (event.key === "Escape") {
-                        setStudentSearchOpen(false);
-                      }
-
-                      if (
-                        event.key === "Enter" &&
-                        studentSearchOpen &&
-                        studentResults.length > 0
-                      ) {
-                        event.preventDefault();
-
-                        selectStudent(
-                          String(studentResults[0].id)
-                        );
-                      }
-                    }}
-                    placeholder="Buscar por nombre, apellido o código..."
-                    className={`${inputClass} pl-10`}
-                  />
-                </div>
-
-                {studentSearchOpen && (
-                  <div
-                    id="loan-student-results"
-                    role="listbox"
-                    aria-label="Resultados de estudiantes"
-                    className="absolute left-0 right-0 top-full z-30 mt-2 max-h-[220px] overflow-y-auto rounded-xl border border-[#DCE7F5] bg-white p-1.5 shadow-[0_12px_30px_rgba(29,62,110,0.14)]"
-                  >
-                    {studentResults.length > 0 ? (
-                      studentResults.map((student) => (
-                        <button
-                          key={student.id}
-                          type="button"
-                          role="option"
-                          aria-selected={false}
-                          onClick={() =>
-                            selectStudent(String(student.id))
-                          }
-                          className="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left hover:bg-[#F0F6FF] focus:bg-[#F0F6FF] focus:outline-none"
-                        >
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#EDF4FF] text-[11px] font-bold text-[#4381D7]">
-                            {initials(
-                              student.nombres,
-                              student.apellidos
-                            )}
-                          </div>
-
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-[12px] font-semibold text-[#283F61]">
-                              {student.nombreCompleto}
-                            </p>
-
-                            <p className="mt-0.5 font-mono text-[10.5px] text-[#8797AE]">
-                              {student.codigoUniversitario}
-                            </p>
-                          </div>
-                        </button>
-                      ))
-                    ) : (
-                      <div className="px-3 py-5 text-center">
-                        <UserRound className="mx-auto h-6 w-6 text-[#A8B8CC]" />
-
-                        <p className="mt-2 text-[12px] text-[#7486A1]">
-                          No se encontraron estudiantes.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </section>
+        <LoanStudentField
+          open={open}
+          source={students}
+          value={selectedStudent}
+          onChange={setSelectedStudent}
+          inputRef={studentInputRef}
+        />
 
         <div className="h-px bg-[#E9EEF6]" />
 
-        {/* =====================================
-            ARTÍCULOS DEL PRÉSTAMO
-        ===================================== */}
-
-        <section>
-          <SectionTitle
-            icon={
-              <PackagePlus className="h-[17px] w-[17px]" />
-            }
-            title="Artículos del préstamo"
-            description="Busca y agrega los artículos necesarios."
-          />
-
-          <div
-            ref={articleSearchRef}
-            className="relative mt-3"
-          >
-            <label
-              htmlFor="loan-article-search"
-              className="mb-1.5 block text-[11.5px] font-semibold text-[#455875]"
-            >
-              Agregar artículo
-            </label>
-
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-[17px] w-[17px] -translate-y-1/2 text-[#8C9BB2]" />
-
-              <input
-                id="loan-article-search"
-                type="search"
-                role="combobox"
-                aria-expanded={articleSearchOpen}
-                aria-controls="loan-article-results"
-                aria-autocomplete="list"
-                autoComplete="off"
-                value={articleQuery}
-                onChange={(event) => {
-                  setArticleQuery(event.target.value);
-                  setArticleSearchOpen(true);
-                }}
-                onFocus={() =>
-                  setArticleSearchOpen(true)
-                }
-                onKeyDown={(event) => {
-                  if (event.key === "Escape") {
-                    setArticleSearchOpen(false);
-                  }
-
-                  if (
-                    event.key === "Enter" &&
-                    articleSearchOpen
-                  ) {
-                    const firstAvailable =
-                      articleResults.find(
-                        (item) => item.disponible > 0
-                      );
-
-                    if (firstAvailable) {
-                      event.preventDefault();
-
-                      // Usamos ID en lugar de código.
-                      addArticle(firstAvailable.id);
-                    }
-                  }
-                }}
-                placeholder="Buscar artículo por nombre o código..."
-                className={`${inputClass} pl-10`}
-              />
-            </div>
-
-            {articleSearchOpen && (
-              <div
-                id="loan-article-results"
-                role="listbox"
-                aria-label="Resultados de artículos"
-                className="absolute left-0 right-0 top-full z-30 mt-2 max-h-[245px] overflow-y-auto rounded-xl border border-[#DCE7F5] bg-white p-1.5 shadow-[0_12px_30px_rgba(29,62,110,0.14)]"
-              >
-                {articleResults.length > 0 ? (
-                  articleResults.map((article) => {
-                    const available =
-                      article.disponible > 0;
-
-                    return (
-                      <button
-                        key={article.id}
-                        type="button"
-                        role="option"
-                        aria-selected={false}
-                        disabled={!available}
-                        onClick={() =>
-                          addArticle(article.id)
-                        }
-                        className="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left hover:bg-[#F0F6FF] focus:bg-[#F0F6FF] focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#E2EBF7] bg-[#F1F6FE] text-[#4D86D2]">
-                          <Package className="h-[19px] w-[19px]" />
-                        </div>
-
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-[12px] font-semibold text-[#283F61]">
-                            {article.nombre}
-                          </p>
-
-                          <p className="mt-0.5 text-[10.5px] text-[#8797AE]">
-                            {article.codigo ?? "Sin código"}
-                            {" · "}
-                            {article.categoria}
-                          </p>
-                        </div>
-
-                        <span
-                          className={`shrink-0 rounded-lg px-2.5 py-1 text-[10.5px] font-semibold ${
-                            available
-                              ? "bg-[#EDF8F1] text-[#1B8E57]"
-                              : "bg-[#F3F5F8] text-[#9AA7B8]"
-                          }`}
-                        >
-                          {article.disponible} disponibles
-                        </span>
-
-                        {available && (
-                          <Plus className="h-4 w-4 shrink-0 text-[#398BFF]" />
-                        )}
-                      </button>
-                    );
-                  })
-                ) : (
-                  <div className="px-3 py-5 text-center">
-                    <Package className="mx-auto h-6 w-6 text-[#A8B8CC]" />
-
-                    <p className="mt-2 text-[12px] text-[#7486A1]">
-                      No hay artículos para mostrar.
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* =====================================
-              ARTÍCULOS SELECCIONADOS
-          ===================================== */}
-
-          <div className="mt-3 overflow-hidden rounded-xl border border-[#E4ECF7] bg-white">
-            <div className="flex items-center justify-between gap-3 border-b border-[#E9EEF6] bg-[#F8FAFE] px-3.5 py-2.5">
-              <span className="text-[11.5px] font-semibold text-[#405676]">
-                Artículos seleccionados
-              </span>
-
-              <span className="rounded-lg bg-[#EAF2FF] px-2.5 py-1 text-[10.5px] font-semibold tabular-nums text-[#3478D5]">
-                {selectedArticles.length} tipos
-              </span>
-            </div>
-
-            {selectedArticles.length === 0 ? (
-              <div className="flex min-h-[105px] flex-col items-center justify-center gap-2 px-4 py-4 text-center">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#F0F5FD] text-[#87A4CC]">
-                  <PackagePlus className="h-5 w-5" />
-                </div>
-
-                <p className="text-[11.5px] text-[#8999B0]">
-                  Busca un artículo para añadirlo al préstamo.
-                </p>
-              </div>
-            ) : (
-              <div className="max-h-[240px] divide-y divide-[#E9EEF6] overflow-y-auto">
-                {selectedArticles.map((selected) => {
-                  const article = inventoryArticles.find(
-                    (item) => item.id === selected.id
-                  );
-
-                  if (!article) return null;
-
-                  return (
-                    <div
-                      key={selected.id}
-                      className="flex flex-wrap items-center gap-3 px-3.5 py-3 transition-colors hover:bg-[#FAFCFF]"
-                    >
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#E2EBF7] bg-[#F1F6FE] text-[#4D86D2]">
-                        <Package className="h-[19px] w-[19px]" />
-                      </div>
-
-                      <div className="min-w-[135px] flex-1">
-                        <p className="truncate text-[12px] font-semibold text-[#253B5D]">
-                          {article.nombre}
-                        </p>
-
-                        <p className="mt-0.5 text-[10.5px] text-[#8A9BB0]">
-                          {article.codigo ?? "Sin código"}
-                          {" · "}
-                          {article.disponible} disponibles
-                        </p>
-                      </div>
-
-                      <QuantityEditor
-                        value={selected.cantidad}
-                        max={article.disponible}
-                        articleName={article.nombre}
-                        onChange={(value) =>
-                          updateQuantity(
-                            selected.id,
-                            value
-                          )
-                        }
-                      />
-
-                      <button
-                        type="button"
-                        aria-label={`Eliminar ${article.nombre} del préstamo`}
-                        title="Eliminar artículo"
-                        onClick={() =>
-                          removeArticle(selected.id)
-                        }
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#A0AEC0] hover:bg-[#FFF0F2] hover:text-[#D65367]"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {selectedArticles.length > 0 && (
-              <div className="flex items-center justify-between border-t border-[#E9EEF6] bg-[#F8FAFE] px-3.5 py-3">
-                <span className="text-[11.5px] font-semibold text-[#5B708E]">
-                  Total de unidades
-                </span>
-
-                <span className="text-[15px] font-bold tabular-nums text-[#267BF0]">
-                  {totalUnits}
-                </span>
-              </div>
-            )}
-          </div>
-        </section>
+        <LoanArticleField
+          open={open}
+          source={inventory}
+          value={selectedArticles}
+          onChange={setSelectedArticles}
+        />
 
         <div className="h-px bg-[#E9EEF6]" />
 
-        {/* =====================================
-            PLAZO Y OBSERVACIONES
-        ===================================== */}
-
         <section>
           <SectionTitle
-            icon={
-              <CalendarDays className="h-[17px] w-[17px]" />
-            }
+            icon={<CalendarDays className="h-[17px] w-[17px]" />}
             title="Plazo y observaciones"
             description="Define la fecha límite e indicaciones adicionales."
           />
@@ -910,26 +350,34 @@ export function LoanFormDialog({
                 className="mb-1.5 block text-[11.5px] font-semibold text-[#455875]"
               >
                 Fecha límite
+                <span className="ml-1 font-normal text-[#9AA8BC]">
+                  (opcional)
+                </span>
               </label>
 
               <input
                 id="loan-deadline"
                 type="date"
+                min={today}
                 value={deadline}
-                onChange={(event) =>
-                  setDeadline(event.target.value)
-                }
-                className={inputClass}
+                onChange={(event) => setDeadline(event.target.value)}
+                className={loanInputClass}
               />
+
+              {fechaInvalida && (
+                <p className="mt-1.5 flex items-center gap-1 text-[10.5px] text-[#B23540]">
+                  <AlertCircle className="h-3.5 w-3.5" />
+                  La fecha límite no puede ser anterior a hoy.
+                </p>
+              )}
             </div>
 
             <div className="flex items-start gap-2.5 rounded-xl border border-[#E1EBFA] bg-[#F3F8FF] px-3 py-2.5">
               <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#347CE6]" />
 
               <p className="text-[10.5px] leading-[17px] text-[#6881A4]">
-                Vista de demostración. Las cantidades
-                disponibles provienen del inventario demo.
-                No se reservan ni descuentan existencias.
+                Las existencias se descuentan automáticamente al registrar el
+                préstamo. Las cantidades mostradas son las disponibles ahora.
               </p>
             </div>
           </div>
@@ -940,9 +388,7 @@ export function LoanFormDialog({
               className="mb-1.5 block text-[11.5px] font-semibold text-[#455875]"
             >
               Observaciones
-              <span className="ml-1 font-normal text-[#9AA8BC]">
-                (opcional)
-              </span>
+              <span className="ml-1 font-normal text-[#9AA8BC]">(opcional)</span>
             </label>
 
             <div className="relative">
@@ -951,11 +397,9 @@ export function LoanFormDialog({
                 rows={2}
                 maxLength={NOTA_MAX}
                 value={note}
-                onChange={(event) =>
-                  setNote(event.target.value)
-                }
+                onChange={(event) => setNote(event.target.value)}
                 placeholder="Indicaciones para la devolución..."
-                className={`${inputClass} h-auto resize-none py-2.5 pb-6`}
+                className={`${loanInputClass} h-auto resize-none py-2.5 pb-6`}
               />
 
               <span className="pointer-events-none absolute bottom-2 right-3 text-[10px] tabular-nums text-[#9AA8BC]">
@@ -964,6 +408,23 @@ export function LoanFormDialog({
             </div>
           </div>
         </section>
+
+        {serverError !== null && (
+          <p
+            role="alert"
+            className="flex items-start gap-2 rounded-xl border border-[#F3C9CC] bg-[#FDECEE] px-3.5 py-2.5 text-[12px] font-medium text-[#B23540]"
+          >
+            <AlertCircle className="mt-px h-4 w-4 shrink-0" />
+            <span>{serverError}</span>
+          </p>
+        )}
+
+        {motivo !== null && (
+          <p className="flex items-center gap-2 rounded-xl border border-[#F3E2BE] bg-[#FFF8E8] px-3 py-2 text-[11.5px] text-[#8A6412]">
+            <ListChecks className="h-4 w-4 shrink-0 text-[#D89A1F]" />
+            {motivo}
+          </p>
+        )}
       </div>
     </Dialog>
   );

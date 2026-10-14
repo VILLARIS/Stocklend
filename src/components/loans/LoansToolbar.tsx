@@ -1,6 +1,6 @@
 import { ChevronDown, Filter, Search, X } from "lucide-react";
 import { Button } from "../ui/Button";
-import type { LoanStatus } from "../../data/demoLoans";
+import type { LoanStatus } from "../../types/loans";
 
 export type LoanFilter = "todos" | LoanStatus;
 

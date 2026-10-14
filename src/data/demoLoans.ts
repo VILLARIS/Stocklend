@@ -1,23 +1,8 @@
-export type LoanStatus = "Activo" | "Finalizado" | "Vencido" | "Anulado";
+import type { DemoLoan, LoanSummary } from "../types/loans";
 
-export interface LoanItem {
-  id: string;
-  nombre: string;
-  cantidad: number;
-  devueltas: number;
-}
-
-export interface DemoLoan {
-  id: string;
-  folio: string;
-  estudiante: string;
-  codigoUniversitario: string;
-  fechaEntrega: string;
-  fechaLimite: string;
-  estado: LoanStatus;
-  items: LoanItem[];
-  observacion?: string;
-}
+// Los tipos del dominio viven en `src/types/loans.ts`. Se reexportan aquí para no
+// romper a los módulos que ya los importan desde este archivo (p. ej. Devoluciones).
+export type { DemoLoan, LoanItem, LoanStatus } from "../types/loans";
 
 export const demoLoans: DemoLoan[] = [
   { id: "1", folio: "PRE-2026-001", estudiante: "Ana María Ramírez", codigoUniversitario: "20231234567", fechaEntrega: "2026-10-09", fechaLimite: "2026-10-13", estado: "Activo", items: [{ id: "1a", nombre: "Olla grande", cantidad: 2, devueltas: 0 }, { id: "1b", nombre: "Tabla de picar", cantidad: 1, devueltas: 0 }] },
@@ -36,14 +21,14 @@ export function totalUnidades(loan: DemoLoan): number {
   return loan.items.reduce((sum, item) => sum + item.cantidad, 0);
 }
 
-export function formatLoanDate(value: string): string {
-  if (!value) return "—";
+export function formatLoanDate(value: string | null): string {
+  if (value === null || value === "") return "—";
   const parts = value.split("-");
   if (parts.length !== 3) return value;
   return `${parts[2]}/${parts[1]}/${parts[0]}`;
 }
 
-export const loanSummary = {
+export const loanSummary: LoanSummary = {
   total: demoLoans.length,
   activos: demoLoans.filter((loan) => loan.estado === "Activo").length,
   finalizados: demoLoans.filter((loan) => loan.estado === "Finalizado").length,

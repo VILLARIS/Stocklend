@@ -459,11 +459,12 @@ fn motivo_obligatorio_y_tipo_de_referencia_valido() {
 }
 
 #[test]
-fn desde_str_solo_acepta_los_seis_tipos_previstos() {
+fn desde_str_solo_acepta_los_tipos_previstos() {
     let aceptados = [
         TipoMovimiento::Alta,
         TipoMovimiento::AjustePositivo,
         TipoMovimiento::AjusteNegativo,
+        TipoMovimiento::Prestamo,
         TipoMovimiento::ReingresoReparacion,
         TipoMovimiento::BajaDaniada,
         TipoMovimiento::BajaFaltante,
@@ -471,7 +472,7 @@ fn desde_str_solo_acepta_los_seis_tipos_previstos() {
     for tipo in aceptados {
         assert_eq!(TipoMovimiento::desde_str(tipo.as_str()), Some(tipo));
     }
-    for rechazado in ["editar", "borrar", "prestamo", "", "ALTA"] {
+    for rechazado in ["editar", "borrar", "devolucion", "", "ALTA"] {
         assert_eq!(TipoMovimiento::desde_str(rechazado), None, "{rechazado}");
     }
 }

@@ -36,8 +36,9 @@ pub const TIPOS_REFERENCIA: [&str; 5] =
 
 /// Subconjunto de movimientos que esta infraestructura sabe aplicar.
 ///
-/// El resto (`prestamo`, `devolucion`, `danio_*`, `perdida_*`) pertenece a los
-/// módulos de Préstamos e Incidentes y se incorporará en fases posteriores. Al
+/// El resto (`devolucion`, `danio_*`, `perdida_*`) pertenece a los módulos de
+/// Devoluciones e Incidentes y se incorporará en fases posteriores. El
+/// `prestamo` ya se aplica aquí porque lo necesita el servicio de Préstamos. Al
 /// ser un `enum`, no es posible solicitar una transición no prevista.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TipoMovimiento {
@@ -47,6 +48,8 @@ pub enum TipoMovimiento {
     AjustePositivo,
     /// Corrección que reduce el total y lo disponible (RN-06).
     AjusteNegativo,
+    /// Presta cantidad o una unidad: disponible → prestada (RN-21, RN-53).
+    Prestamo,
     /// Una unidad dañada vuelve a estar disponible tras repararse.
     ReingresoReparacion,
     /// Se da de baja una unidad dañada (sale del inventario).
@@ -62,6 +65,7 @@ impl TipoMovimiento {
             TipoMovimiento::Alta => "alta",
             TipoMovimiento::AjustePositivo => "ajuste_positivo",
             TipoMovimiento::AjusteNegativo => "ajuste_negativo",
+            TipoMovimiento::Prestamo => "prestamo",
             TipoMovimiento::ReingresoReparacion => "reingreso_reparacion",
             TipoMovimiento::BajaDaniada => "baja_daniada",
             TipoMovimiento::BajaFaltante => "baja_faltante",
@@ -69,13 +73,14 @@ impl TipoMovimiento {
     }
 
     /// Interpreta un tipo persistido. Devuelve `None` para cualquier valor que
-    /// no sea uno de los seis tipos que esta infraestructura aplica, evitando
+    /// no sea uno de los tipos que esta infraestructura aplica, evitando
     /// transiciones arbitrarias.
     pub fn desde_str(valor: &str) -> Option<Self> {
         match valor {
             "alta" => Some(TipoMovimiento::Alta),
             "ajuste_positivo" => Some(TipoMovimiento::AjustePositivo),
             "ajuste_negativo" => Some(TipoMovimiento::AjusteNegativo),
+            "prestamo" => Some(TipoMovimiento::Prestamo),
             "reingreso_reparacion" => Some(TipoMovimiento::ReingresoReparacion),
             "baja_daniada" => Some(TipoMovimiento::BajaDaniada),
             "baja_faltante" => Some(TipoMovimiento::BajaFaltante),
@@ -161,6 +166,10 @@ pub fn calcular(
         TipoMovimiento::AjusteNegativo => {
             nuevo.total -= cantidad;
             nuevo.disponible -= cantidad;
+        }
+        TipoMovimiento::Prestamo => {
+            nuevo.disponible -= cantidad;
+            nuevo.prestada += cantidad;
         }
         TipoMovimiento::ReingresoReparacion => {
             nuevo.danada -= cantidad;

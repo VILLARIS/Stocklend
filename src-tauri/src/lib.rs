@@ -31,7 +31,11 @@ pub fn run() {
             commands::students::obtener_incidencias_estudiante,
             commands::students::crear_estudiante,
             commands::students::actualizar_estudiante,
-            commands::students::cambiar_estado_estudiante
+            commands::students::cambiar_estado_estudiante,
+            commands::prestamos::listar_prestamos,
+            commands::prestamos::obtener_detalle_prestamo,
+            commands::prestamos::obtener_estadisticas_prestamos,
+            commands::prestamos::registrar_prestamo
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

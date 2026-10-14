@@ -378,6 +378,24 @@ pub fn cambiar_estado_unidad(
     )
 }
 
+/// Marca una unidad como `prestada` y la vincula a un renglón de préstamo
+/// (RN-53). El `CHECK` del esquema exige el vínculo cuando el estado es
+/// `prestada`, así que ambas columnas se escriben juntas. Devuelve las filas
+/// afectadas (0 si la unidad no existe).
+pub fn marcar_unidad_prestada(
+    conn: &Connection,
+    id: i64,
+    prestamo_detalle_id: i64,
+) -> rusqlite::Result<usize> {
+    conn.execute(
+        "UPDATE articulo_unidad \
+         SET estado = 'prestada', prestamo_detalle_id = ?1, \
+             actualizado_en = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') \
+         WHERE id = ?2",
+        rusqlite::params![prestamo_detalle_id, id],
+    )
+}
+
 /// Actualiza código, descripción y notas de una unidad. No toca el estado ni el
 /// préstamo asociado. Devuelve las filas afectadas (0 si no existe).
 pub fn actualizar_unidad(

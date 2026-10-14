@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Eye, MoreHorizontal } from "lucide-react";
-import type { DemoLoan } from "../../data/demoLoans";
+import type { DemoLoan } from "../../types/loans";
 
 interface LoanActionsMenuProps {
   loan: DemoLoan;

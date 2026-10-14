@@ -1,5 +1,5 @@
 import { Package } from "lucide-react";
-import type { LoanItem } from "../../data/demoLoans";
+import type { LoanItem } from "../../types/loans";
 
 export function LoanItemsList({ items }: { items: LoanItem[] }) {
   return (
