@@ -12,9 +12,9 @@ import type {
   IncidentEstado,
   IncidentTipo,
   StudentIncident,
-} from "../../data/demoStudents";
+} from "../../types/students";
 
-import { formatFecha } from "../../data/demoStudents";
+import { formatLocalDate } from "../../utils/formatDate";
 
 interface StudentIncidentsListProps {
   incidents: StudentIncident[];
@@ -49,6 +49,13 @@ const typeStyles: Record<
     iconBackground: "bg-[#FFF6E8]",
     badge:
       "border-[#F5E3C4] bg-[#FFF7EB] text-[#B87916]",
+  },
+  Otro: {
+    icon: AlertTriangle,
+    iconColor: "text-[#64748B]",
+    iconBackground: "bg-[#F1F4F8]",
+    badge:
+      "border-[#E4E8EF] bg-[#F4F6F9] text-[#64748B]",
   },
 };
 
@@ -150,7 +157,7 @@ export function StudentIncidentsList({
 
         <p className="max-w-[310px] text-[11.5px] leading-5 text-[#8A99B0]">
           Este estudiante no tiene pérdidas,
-          daños ni faltantes registrados.
+          daños ni otras incidencias registradas.
         </p>
       </div>
     );
@@ -230,7 +237,7 @@ export function StudentIncidentsList({
                 className="h-3.5 w-3.5"
                 aria-hidden="true"
               />
-              {formatFecha(incident.fecha)}
+              {formatLocalDate(incident.fecha)}
             </span>
 
             {/* ESTADO */}

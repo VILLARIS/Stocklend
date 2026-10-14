@@ -1,19 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { MoreHorizontal, Eye, Pencil, History } from "lucide-react";
-import type { StudentSummary } from "../../data/demoStudents";
+import { createPortal } from "react-dom";
+import { MoreHorizontal, Eye, Pencil, History, Power, PowerOff } from "lucide-react";
+import type { StudentSummary } from "../../types/students";
 
 interface StudentActionsMenuProps {
   student: StudentSummary;
+  busy?: boolean;
   onDetails: (student: StudentSummary) => void;
   onEdit: (student: StudentSummary) => void;
   onHistory: (student: StudentSummary) => void;
+  onToggleActive: (student: StudentSummary) => void;
 }
 
 export function StudentActionsMenu({
   student,
+  busy = false,
   onDetails,
   onEdit,
   onHistory,
+  onToggleActive,
 }: StudentActionsMenuProps) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number }>({
@@ -72,12 +77,19 @@ export function StudentActionsMenu({
   }, [open, place]);
 
   const actions = [
-    { label: "Ver detalles", icon: Eye, run: () => onDetails(student) },
-    { label: "Editar estudiante", icon: Pencil, run: () => onEdit(student) },
+    { label: "Ver detalles", icon: Eye, run: () => onDetails(student), disabled: false },
+    { label: "Editar estudiante", icon: Pencil, run: () => onEdit(student), disabled: false },
     {
       label: "Ver historial de préstamos",
       icon: History,
       run: () => onHistory(student),
+      disabled: false,
+    },
+    {
+      label: student.activo ? "Desactivar estudiante" : "Reactivar estudiante",
+      icon: student.activo ? PowerOff : Power,
+      run: () => onToggleActive(student),
+      disabled: busy,
     },
   ];
 
@@ -103,34 +115,37 @@ export function StudentActionsMenu({
         <MoreHorizontal className="h-4 w-4" />
       </button>
 
-      {open && (
-        <div
-          ref={menuRef}
-          role="menu"
-          aria-label={`Acciones para ${student.nombreCompleto}`}
-          style={{ top: pos.top, left: pos.left }}
-          className="fixed z-50 w-[240px] overflow-hidden rounded-md border border-border bg-surface py-1 shadow-card-hover"
-        >
-          {actions.map((action) => {
-            const Icon = action.icon;
-            return (
-              <button
-                key={action.label}
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setOpen(false);
-                  action.run();
-                }}
-                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-text transition-colors duration-[120ms] hover:bg-[#EEF2F8] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand"
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                {action.label}
-              </button>
-            );
-          })}
-        </div>
-      )}
+      {open &&
+        createPortal(
+          <div
+            ref={menuRef}
+            role="menu"
+            aria-label={`Acciones para ${student.nombreCompleto}`}
+            style={{ top: pos.top, left: pos.left }}
+            className="fixed z-50 w-[240px] overflow-hidden rounded-md border border-border bg-surface py-1 shadow-card-hover"
+          >
+            {actions.map((action) => {
+              const Icon = action.icon;
+              return (
+                <button
+                  key={action.label}
+                  type="button"
+                  role="menuitem"
+                  disabled={action.disabled}
+                  onClick={() => {
+                    setOpen(false);
+                    action.run();
+                  }}
+                  className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-text transition-colors duration-[120ms] hover:bg-[#EEF2F8] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
+                >
+                  <Icon className="h-4 w-4 shrink-0" />
+                  {action.label}
+                </button>
+              );
+            })}
+          </div>,
+          document.body
+        )}
     </>
   );
 }

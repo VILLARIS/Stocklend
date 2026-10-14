@@ -24,7 +24,14 @@ pub fn run() {
             commands::inventory::ajustar_existencias,
             commands::inventory::agregar_unidad,
             commands::inventory::actualizar_unidad,
-            commands::inventory::cambiar_estado_unidad
+            commands::inventory::cambiar_estado_unidad,
+            commands::students::listar_estudiantes,
+            commands::students::obtener_estadisticas_estudiantes,
+            commands::students::obtener_historial_estudiante,
+            commands::students::obtener_incidencias_estudiante,
+            commands::students::crear_estudiante,
+            commands::students::actualizar_estudiante,
+            commands::students::cambiar_estado_estudiante
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

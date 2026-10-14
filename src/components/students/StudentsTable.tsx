@@ -11,8 +11,9 @@ import { DataTable, type Column } from "../ui/DataTable";
 import { EmptyState } from "../ui/EmptyState";
 import { Button } from "../ui/Button";
 import { StudentActionsMenu } from "./StudentActionsMenu";
+import { initials } from "../../utils/initials";
 
-import type { StudentSummary } from "../../data/demoStudents";
+import type { StudentSummary } from "../../types/students";
 
 interface StudentsTableProps {
   items: StudentSummary[];
@@ -24,21 +25,13 @@ interface StudentsTableProps {
   onDetails: (student: StudentSummary) => void;
   onEdit: (student: StudentSummary) => void;
   onHistory: (student: StudentSummary) => void;
+  onToggleActive: (student: StudentSummary) => void;
+  busy?: boolean;
 }
 
 // ========================================
 // AVATAR DEL ESTUDIANTE
 // ========================================
-
-function initials(
-  nombres: string,
-  apellidos: string
-): string {
-  const first = nombres.trim().charAt(0);
-  const second = apellidos.trim().charAt(0);
-
-  return `${first}${second}`.toUpperCase();
-}
 
 function StudentAvatar({
   nombres,
@@ -185,6 +178,8 @@ export function StudentsTable({
   onDetails,
   onEdit,
   onHistory,
+  onToggleActive,
+  busy,
 }: StudentsTableProps) {
   const columns = useMemo<Column<StudentSummary>[]>(
     () => [
@@ -281,15 +276,17 @@ export function StudentsTable({
           <div className="flex justify-end">
             <StudentActionsMenu
               student={row}
+              busy={busy}
               onDetails={onDetails}
               onEdit={onEdit}
               onHistory={onHistory}
+              onToggleActive={onToggleActive}
             />
           </div>
         ),
       },
     ],
-    [onDetails, onEdit, onHistory]
+    [onDetails, onEdit, onHistory, onToggleActive, busy]
   );
 
   return (

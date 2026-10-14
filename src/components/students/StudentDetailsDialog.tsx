@@ -24,13 +24,24 @@ import { Dialog } from "../ui/Dialog";
 import { Button } from "../ui/Button";
 import { StudentHistoryTable } from "./StudentHistoryTable";
 import { StudentIncidentsList } from "./StudentIncidentsList";
+import {
+  ResourceError,
+  ResourceLoading,
+} from "./StudentsResourceState";
+import { initials } from "../../utils/initials";
+import { formatLocalDate } from "../../utils/formatDate";
 
 import {
-  formatFecha,
-  getStudentIncidents,
-  getStudentLoans,
-  type StudentSummary,
-} from "../../data/demoStudents";
+  useStudentHistory,
+  useStudentIncidents,
+} from "../../hooks/useStudents";
+
+import {
+  adaptStudentIncident,
+  adaptStudentLoan,
+} from "../../services/studentsAdapters";
+
+import type { StudentSummary } from "../../types/students";
 
 export type StudentDetailsTab =
   | "general"
@@ -61,15 +72,6 @@ const tabs = [
     icon: AlertTriangle,
   },
 ] as const;
-
-function initials(
-  nombres: string,
-  apellidos: string
-): string {
-  return `${nombres.trim().charAt(0)}${apellidos
-    .trim()
-    .charAt(0)}`.toUpperCase();
-}
 
 function StatusBadge({ active }: { active: boolean }) {
   return (
@@ -233,10 +235,29 @@ export function StudentDetailsDialog({
     setTab(initialTab);
   }, [open, student?.id, initialTab]);
 
+  // El historial y las incidencias se consultan solo cuando su pestaña está
+  // abierta; con la ficha en "general" no se pide nada a SQLite. Al cambiar de
+  // estudiante o de pestaña, el hook descarta la respuesta anterior.
+  const numericId =
+    student !== null && Number.isInteger(Number(student.id))
+      ? Number(student.id)
+      : null;
+  const historyId = open && tab === "historial" ? numericId : null;
+  const incidentsId = open && tab === "incidencias" ? numericId : null;
+
+  const history = useStudentHistory(historyId);
+  const incidentsResource = useStudentIncidents(incidentsId);
+
   if (!student) return null;
 
-  const loans = getStudentLoans(student.id);
-  const incidents = getStudentIncidents(student.id);
+  const loans = history.data
+    ? history.data.map((loan) => adaptStudentLoan(loan, student.id))
+    : [];
+  const incidents = incidentsResource.data
+    ? incidentsResource.data.map((incident) =>
+        adaptStudentIncident(incident, student.id)
+      )
+    : [];
 
   const onKeyDown = (
     event: KeyboardEvent<HTMLDivElement>
@@ -440,7 +461,7 @@ export function StudentDetailsDialog({
                   label="Fecha de alta"
                 >
                   <span className="tabular-nums">
-                    {formatFecha(student.creadoEn)}
+                    {formatLocalDate(student.creadoEn)}
                   </span>
                 </DetailItem>
               </dl>
@@ -506,12 +527,21 @@ export function StudentDetailsDialog({
               </SectionTitle>
 
               <span className="rounded-lg bg-[#EAF2FF] px-2.5 py-1 text-[11px] font-semibold tabular-nums text-[#3478D5]">
-                {loans.length}
+                {history.status === "success" ? loans.length : "—"}
               </span>
             </div>
 
             <div className="min-w-0 overflow-hidden rounded-xl border border-[#E7EDF6] bg-white">
-              <StudentHistoryTable loans={loans} />
+              {history.status === "loading" ? (
+                <ResourceLoading />
+              ) : history.status === "error" ? (
+                <ResourceError
+                  message={history.error ?? ""}
+                  onRetry={history.refetch}
+                />
+              ) : (
+                <StudentHistoryTable loans={loans} />
+              )}
             </div>
           </div>
         )}
@@ -536,12 +566,23 @@ export function StudentDetailsDialog({
               </SectionTitle>
 
               <span className="rounded-lg bg-[#FFF0F2] px-2.5 py-1 text-[11px] font-semibold tabular-nums text-[#D65367]">
-                {incidents.length}
+                {incidentsResource.status === "success"
+                  ? incidents.length
+                  : "—"}
               </span>
             </div>
 
             <div className="min-w-0 overflow-hidden rounded-xl border border-[#E7EDF6] bg-white">
-              <StudentIncidentsList incidents={incidents} />
+              {incidentsResource.status === "loading" ? (
+                <ResourceLoading />
+              ) : incidentsResource.status === "error" ? (
+                <ResourceError
+                  message={incidentsResource.error ?? ""}
+                  onRetry={incidentsResource.refetch}
+                />
+              ) : (
+                <StudentIncidentsList incidents={incidents} />
+              )}
             </div>
           </div>
         )}

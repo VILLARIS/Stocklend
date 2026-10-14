@@ -11,9 +11,9 @@ import { DataTable, type Column } from "../ui/DataTable";
 import type {
   LoanEstado,
   StudentLoan,
-} from "../../data/demoStudents";
+} from "../../types/students";
 
-import { formatFecha } from "../../data/demoStudents";
+import { formatLocalDate } from "../../utils/formatDate";
 
 interface StudentHistoryTableProps {
   loans: StudentLoan[];
@@ -95,7 +95,7 @@ function DateValue({
         className="h-3.5 w-3.5 shrink-0 text-[#A1B0C4]"
         aria-hidden="true"
       />
-      {formatFecha(date)}
+      {formatLocalDate(date)}
     </span>
   );
 }

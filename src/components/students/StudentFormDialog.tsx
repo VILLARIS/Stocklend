@@ -1,28 +1,36 @@
 
 import { useEffect, useRef, useState } from "react";
-import { GraduationCap, Info, UserRound, Hash } from "lucide-react";
+import { CircleAlert, GraduationCap, Hash, Info, Loader2 } from "lucide-react";
 
 import { Dialog } from "../ui/Dialog";
 import { FormField } from "../ui/FormField";
 import { Button } from "../ui/Button";
 
-import {
-  findStudentByCodigo,
-  type Student,
-} from "../../data/demoStudents";
-
-const NOTA_MAX = 200;
+import type { Student } from "../../types/students";
 
 export type StudentFormMode = "create" | "edit";
+
+export interface StudentFormValues {
+  codigo: string;
+  nombres: string;
+  apellidos: string;
+}
 
 interface StudentFormDialogProps {
   open: boolean;
   mode: StudentFormMode;
   student?: Student;
+  /** Directorio real, usado para avisar de códigos universitarios repetidos. */
+  students: Student[];
+  /** Hay un guardado en curso. */
+  saving: boolean;
+  /** Error devuelto por el backend al guardar. */
+  serverError: string | null;
   onClose: () => void;
+  onSubmit: (values: StudentFormValues) => void;
 }
 
-type FieldKey = "codigo" | "nombres" | "apellidos" | "nota";
+type FieldKey = "codigo" | "nombres" | "apellidos";
 
 const inputClass = `
   h-10 w-full rounded-[10px]
@@ -67,14 +75,17 @@ export function StudentFormDialog({
   open,
   mode,
   student,
+  students,
+  saving,
+  serverError,
   onClose,
+  onSubmit,
 }: StudentFormDialogProps) {
   const isEdit = mode === "edit";
 
   const [codigo, setCodigo] = useState("");
   const [nombres, setNombres] = useState("");
   const [apellidos, setApellidos] = useState("");
-  const [nota, setNota] = useState("");
 
   const [touched, setTouched] = useState<
     Record<FieldKey, boolean>
@@ -82,7 +93,6 @@ export function StudentFormDialog({
     codigo: false,
     nombres: false,
     apellidos: false,
-    nota: false,
   });
 
   const codigoRef = useRef<HTMLInputElement>(null);
@@ -101,12 +111,10 @@ export function StudentFormDialog({
       setApellidos("");
     }
 
-    setNota("");
     setTouched({
       codigo: false,
       nombres: false,
       apellidos: false,
-      nota: false,
     });
   }, [open, isEdit, student]);
 
@@ -118,9 +126,12 @@ export function StudentFormDialog({
     if (codigoLimpio === "") {
       result.codigo = "El código universitario es obligatorio.";
     } else {
-      const duplicado = findStudentByCodigo(
-        codigoLimpio,
-        isEdit ? student?.id : undefined
+      const objetivo = codigoLimpio.toLowerCase();
+      const duplicado = students.find(
+        (item) =>
+          item.id !== (isEdit ? student?.id : undefined) &&
+          item.codigoUniversitario.trim().toLowerCase() ===
+            objetivo
       );
 
       if (duplicado) {
@@ -137,14 +148,11 @@ export function StudentFormDialog({
       result.apellidos = "Los apellidos son obligatorios.";
     }
 
-    if (nota.length > NOTA_MAX) {
-      result.nota = "La nota no puede pasar de 200 caracteres.";
-    }
-
     return result;
   };
 
   const errors = computeErrors();
+  const canSubmit = !saving && Object.keys(errors).length === 0;
 
   const markTouched = (key: FieldKey) => {
     setTouched((previous) => ({
@@ -156,10 +164,23 @@ export function StudentFormDialog({
   const showError = (key: FieldKey) =>
     touched[key] ? errors[key] : undefined;
 
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setTouched({ codigo: true, nombres: true, apellidos: true });
+    if (Object.keys(errors).length > 0) {
+      return;
+    }
+    onSubmit({
+      codigo: codigo.trim(),
+      nombres: nombres.trim(),
+      apellidos: apellidos.trim(),
+    });
+  };
+
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={saving ? () => undefined : onClose}
       title={isEdit ? "Editar estudiante" : "Nuevo estudiante"}
       subtitle={
         isEdit
@@ -170,19 +191,36 @@ export function StudentFormDialog({
       initialFocusRef={isEdit ? nombresRef : codigoRef}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onClose}
+            disabled={saving}
+          >
             Cancelar
           </Button>
 
-          <span title="Disponible cuando se conecte la persistencia">
-            <Button disabled>
-              {isEdit ? "Guardar cambios" : "Registrar estudiante"}
-            </Button>
-          </span>
+          <Button type="submit" form="estudiante-form" disabled={!canSubmit}>
+            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isEdit ? "Guardar cambios" : "Registrar estudiante"}
+          </Button>
         </>
       }
     >
       <div className="space-y-4">
+        {serverError !== null && (
+          <div
+            role="alert"
+            className="flex items-start gap-2.5 rounded-xl border border-[#F6CBCB] bg-[#FDF1F1] px-3 py-2.5"
+          >
+            <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-error" />
+
+            <p className="text-[11px] leading-[17px] text-error">
+              {serverError}
+            </p>
+          </div>
+        )}
+
         <section>
           <SectionTitle
             icon={<GraduationCap className="h-[18px] w-[18px]" />}
@@ -190,157 +228,106 @@ export function StudentFormDialog({
             description="Datos utilizados para identificar al responsable"
           />
 
-          <div className="mt-3 space-y-3.5">
-            <FormField
-              label="Código universitario"
-              htmlFor="estudiante-codigo"
-              required
-              error={showError("codigo")}
-              hint={
-                isEdit
-                  ? "El código identifica al estudiante y no cambia."
-                  : "Puede contener letras, números y guiones."
-              }
-            >
-              <div className="relative">
-                <Hash className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8DA0BA]" />
+          <form id="estudiante-form" onSubmit={handleSubmit} noValidate>
+            <div className="mt-3 space-y-3.5">
+              <FormField
+                label="Código universitario"
+                htmlFor="estudiante-codigo"
+                required
+                error={showError("codigo")}
+                hint={
+                  isEdit
+                    ? "Puedes corregir el código, pero debe seguir siendo único."
+                    : "Puede contener letras, números y guiones."
+                }
+              >
+                <div className="relative">
+                  <Hash className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8DA0BA]" />
 
-                <input
-                  ref={codigoRef}
-                  id="estudiante-codigo"
-                  value={codigo}
-                  readOnly={isEdit}
-                  onChange={(event) => setCodigo(event.target.value)}
-                  onBlur={() => markTouched("codigo")}
-                  placeholder="Por ejemplo, 20231234567"
-                  aria-readonly={isEdit || undefined}
-                  aria-invalid={Boolean(showError("codigo"))}
-                  className={`
-                    ${inputClass} pl-10 font-mono
-                    ${
-                      showError("codigo")
-                        ? "border-error"
-                        : "border-[#DFE7F2]"
-                    }
-                    ${
-                      isEdit
-                        ? "cursor-not-allowed bg-[#F3F6FA] text-[#7485A0]"
-                        : ""
-                    }
-                  `}
-                />
+                  <input
+                    ref={codigoRef}
+                    id="estudiante-codigo"
+                    value={codigo}
+                    disabled={saving}
+                    onChange={(event) => setCodigo(event.target.value)}
+                    onBlur={() => markTouched("codigo")}
+                    placeholder="Por ejemplo, 20231234567"
+                    aria-invalid={Boolean(showError("codigo"))}
+                    className={`
+                      ${inputClass} pl-10 font-mono
+                      ${
+                        showError("codigo")
+                          ? "border-error"
+                          : "border-[#DFE7F2]"
+                      }
+                    `}
+                  />
+                </div>
+              </FormField>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <FormField
+                  label="Nombres"
+                  htmlFor="estudiante-nombres"
+                  required
+                  error={showError("nombres")}
+                >
+                  <input
+                    ref={nombresRef}
+                    id="estudiante-nombres"
+                    value={nombres}
+                    disabled={saving}
+                    onChange={(event) => setNombres(event.target.value)}
+                    onBlur={() => markTouched("nombres")}
+                    placeholder="Por ejemplo, Ana María"
+                    aria-invalid={Boolean(showError("nombres"))}
+                    className={`
+                      ${inputClass}
+                      ${
+                        showError("nombres")
+                          ? "border-error"
+                          : "border-[#DFE7F2]"
+                      }
+                    `}
+                  />
+                </FormField>
+
+                <FormField
+                  label="Apellidos"
+                  htmlFor="estudiante-apellidos"
+                  required
+                  error={showError("apellidos")}
+                >
+                  <input
+                    id="estudiante-apellidos"
+                    value={apellidos}
+                    disabled={saving}
+                    onChange={(event) => setApellidos(event.target.value)}
+                    onBlur={() => markTouched("apellidos")}
+                    placeholder="Por ejemplo, Ramírez Solís"
+                    aria-invalid={Boolean(showError("apellidos"))}
+                    className={`
+                      ${inputClass}
+                      ${
+                        showError("apellidos")
+                          ? "border-error"
+                          : "border-[#DFE7F2]"
+                      }
+                    `}
+                  />
+                </FormField>
               </div>
-            </FormField>
-
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <FormField
-                label="Nombres"
-                htmlFor="estudiante-nombres"
-                required
-                error={showError("nombres")}
-              >
-                <input
-                  ref={nombresRef}
-                  id="estudiante-nombres"
-                  value={nombres}
-                  onChange={(event) => setNombres(event.target.value)}
-                  onBlur={() => markTouched("nombres")}
-                  placeholder="Por ejemplo, Ana María"
-                  aria-invalid={Boolean(showError("nombres"))}
-                  className={`
-                    ${inputClass}
-                    ${
-                      showError("nombres")
-                        ? "border-error"
-                        : "border-[#DFE7F2]"
-                    }
-                  `}
-                />
-              </FormField>
-
-              <FormField
-                label="Apellidos"
-                htmlFor="estudiante-apellidos"
-                required
-                error={showError("apellidos")}
-              >
-                <input
-                  id="estudiante-apellidos"
-                  value={apellidos}
-                  onChange={(event) => setApellidos(event.target.value)}
-                  onBlur={() => markTouched("apellidos")}
-                  placeholder="Por ejemplo, Ramírez Solís"
-                  aria-invalid={Boolean(showError("apellidos"))}
-                  className={`
-                    ${inputClass}
-                    ${
-                      showError("apellidos")
-                        ? "border-error"
-                        : "border-[#DFE7F2]"
-                    }
-                  `}
-                />
-              </FormField>
             </div>
-          </div>
-        </section>
-
-        <div className="h-px bg-[#E9EEF6]" />
-
-        <section>
-          <SectionTitle
-            icon={<UserRound className="h-[17px] w-[17px]" />}
-            title="Información adicional"
-            description="Observaciones opcionales del registro"
-          />
-
-          <div className="mt-3">
-            <FormField
-              label="Nota (opcional)"
-              htmlFor="estudiante-nota"
-              error={showError("nota")}
-            >
-              <div className="relative">
-                <textarea
-                  id="estudiante-nota"
-                  value={nota}
-                  rows={2}
-                  maxLength={NOTA_MAX}
-                  onChange={(event) => setNota(event.target.value)}
-                  onBlur={() => markTouched("nota")}
-                  placeholder="Información útil para el día a día..."
-                  aria-invalid={Boolean(showError("nota"))}
-                  className={`
-                    w-full resize-none rounded-[10px]
-                    border bg-white px-3.5 py-2.5 pb-6
-                    text-[12.5px] leading-5 text-[#243B60]
-                    placeholder:text-[#9AA8BC]
-                    transition-[border-color,box-shadow] duration-200
-                    hover:border-[#BAD0EC]
-                    focus:border-[#398BFF] focus:outline-none
-                    focus:ring-2 focus:ring-[#398BFF]/10
-                    ${
-                      showError("nota")
-                        ? "border-error"
-                        : "border-[#DFE7F2]"
-                    }
-                  `}
-                />
-
-                <span className="pointer-events-none absolute bottom-2 right-3 text-[10px] tabular-nums text-[#96A4B8]">
-                  {nota.length}/{NOTA_MAX}
-                </span>
-              </div>
-            </FormField>
-          </div>
+          </form>
         </section>
 
         <div className="flex items-start gap-2.5 rounded-xl border border-[#DFEAFE] bg-[#F3F8FF] px-3 py-2.5">
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#398BFF]" />
 
           <p className="text-[11px] leading-[17px] text-[#6881A4]">
-            Datos de demostración. El guardado estará disponible
-            cuando esta pantalla se conecte a la base de datos.
+            El código universitario debe ser único. Los estudiantes no se
+            eliminan: solo se marcan como inactivos cuando dejan de usar el
+            servicio.
           </p>
         </div>
       </div>

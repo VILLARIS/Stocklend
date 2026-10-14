@@ -12,39 +12,12 @@
 // el identificador del estudiante como vínculo. La fecha límite de un préstamo
 // es opcional (RN-25): `null` significa que no hay vencimiento.
 
-export type Student = {
-  id: string;
-  codigoUniversitario: string;
-  nombres: string;
-  apellidos: string;
-  activo: boolean;
-  creadoEn: string;
-};
-
-export type LoanEstado = "Activo" | "Cerrado" | "Anulado";
-
-export type StudentLoan = {
-  id: string;
-  folio: string;
-  studentId: string;
-  fecha: string;
-  fechaLimite: string | null;
-  estado: LoanEstado;
-  unidades: number;
-};
-
-export type IncidentTipo = "Daño" | "Pérdida" | "Faltante";
-export type IncidentEstado = "Abierto" | "Resuelto";
-
-export type StudentIncident = {
-  id: string;
-  codigo: string;
-  studentId: string;
-  tipo: IncidentTipo;
-  estado: IncidentEstado;
-  fecha: string;
-  articulo: string;
-};
+import type {
+  Student,
+  StudentIncident,
+  StudentLoan,
+  StudentSummary,
+} from "../types/students";
 
 export const demoStudents: Student[] = [
   { id: "s01", codigoUniversitario: "20231234567", nombres: "Ana", apellidos: "Ramírez Solís", activo: true, creadoEn: "2026-02-11" },
@@ -85,14 +58,6 @@ export const demoStudentIncidents: StudentIncident[] = [
   { id: "i02", codigo: "INC-2026-0004", studentId: "s03", tipo: "Daño", estado: "Resuelto", fecha: "2026-10-02", articulo: "Colador grande" },
   { id: "i03", codigo: "INC-2026-0002", studentId: "s09", tipo: "Faltante", estado: "Abierto", fecha: "2026-09-28", articulo: "Copas de vino" },
 ];
-
-export type StudentSummary = Student & {
-  nombreCompleto: string;
-  prestamosActivos: number;
-  prestamosFinalizados: number;
-  unidadesActivas: number;
-  incidencias: number;
-};
 
 export function buildStudentSummary(student: Student): StudentSummary {
   const loans = demoStudentLoans.filter((loan) => loan.studentId === student.id);

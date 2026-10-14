@@ -1,10 +1,11 @@
-
 import { useEffect, useMemo, useState } from "react";
 
 import {
+  AlertCircle,
   AlertTriangle,
   ChevronLeft,
   ChevronRight,
+  CircleCheck,
   Handshake,
   Plus,
   Users,
@@ -14,6 +15,7 @@ import background from "../assets/background/background.png";
 
 import { PageHeader } from "../components/layout/PageHeader";
 import { Button } from "../components/ui/Button";
+import { Dialog } from "../components/ui/Dialog";
 import { StatCardV2 } from "../components/ui/StatCardV2";
 
 import {
@@ -26,6 +28,7 @@ import { StudentsTable } from "../components/students/StudentsTable";
 import {
   StudentFormDialog,
   type StudentFormMode,
+  type StudentFormValues,
 } from "../components/students/StudentFormDialog";
 
 import {
@@ -33,13 +36,23 @@ import {
   type StudentDetailsTab,
 } from "../components/students/StudentDetailsDialog";
 
-import { DEMO_MODE } from "../data/demoData";
+import {
+  ResourceError,
+  ResourceLoading,
+} from "../components/students/StudentsResourceState";
 
 import {
-  studentDirectorySummary,
-  studentsWithSummary,
-  type StudentSummary,
-} from "../data/demoStudents";
+  useStudentMutations,
+  useStudentsDirectory,
+  useStudentStats,
+} from "../hooks/useStudents";
+
+import {
+  adaptDirectory,
+  adaptDirectoryStats,
+} from "../services/studentsAdapters";
+
+import type { StudentSummary } from "../types/students";
 
 const PAGE_SIZE = 8;
 
@@ -95,17 +108,60 @@ export function StudentsPage() {
   const [detailsTab, setDetailsTab] =
     useState<StudentDetailsTab>("general");
 
+  // ----------------------------------------
+  // ESCRITURAS (registro, edición, estado)
+  // ----------------------------------------
+
+  const mutations = useStudentMutations();
+
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const [pendingToggle, setPendingToggle] =
+    useState<StudentSummary | null>(null);
+
+  useEffect(() => {
+    if (notice === null) return;
+    const timer = window.setTimeout(() => setNotice(null), 3500);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+
+  // ========================================
+  // DATOS REALES (SQLite)
+  // ========================================
+
+  const directory = useStudentsDirectory();
+  const stats = useStudentStats();
+
+  const students: StudentSummary[] = useMemo(
+    () =>
+      directory.data
+        ? adaptDirectory(directory.data).sort((a, b) =>
+            a.apellidos.localeCompare(b.apellidos, "es"),
+          )
+        : [],
+    [directory.data],
+  );
+
+  const summary = useMemo(
+    () => (stats.data ? adaptDirectoryStats(stats.data) : null),
+    [stats.data],
+  );
+
   // ========================================
   // ACCIONES
   // ========================================
 
   const openCreate = () => {
+    mutations.clearError();
+    setNotice(null);
     setFormMode("create");
     setEditingStudent(null);
     setFormOpen(true);
   };
 
   const openEdit = (student: StudentSummary) => {
+    mutations.clearError();
+    setNotice(null);
     setFormMode("edit");
     setEditingStudent(student);
     setFormOpen(true);
@@ -131,6 +187,68 @@ export function StudentsPage() {
     setDetailsOpen(false);
   };
 
+  const refreshDirectory = () => {
+    directory.refetch();
+    stats.refetch();
+  };
+
+  const handleFormSubmit = async (values: StudentFormValues) => {
+    const ok =
+      formMode === "edit" && editingStudent !== null
+        ? await mutations.actualizar(
+            Number(editingStudent.id),
+            values.codigo,
+            values.nombres,
+            values.apellidos,
+          )
+        : await mutations.crear(
+            values.codigo,
+            values.nombres,
+            values.apellidos,
+          );
+
+    if (!ok) return;
+
+    const nombreCompleto = `${values.nombres} ${values.apellidos}`;
+    setFormOpen(false);
+    setEditingStudent(null);
+    refreshDirectory();
+    setNotice(
+      formMode === "edit"
+        ? `Estudiante «${nombreCompleto}» actualizado.`
+        : `Estudiante «${nombreCompleto}» registrado.`,
+    );
+  };
+
+  const handleToggle = async (student: StudentSummary) => {
+    mutations.clearError();
+    setNotice(null);
+
+    if (!student.activo) {
+      const ok = await mutations.cambiarEstado(Number(student.id), true);
+      if (!ok) return;
+      refreshDirectory();
+      setNotice(`Estudiante «${student.nombreCompleto}» reactivado.`);
+      return;
+    }
+
+    setPendingToggle(student);
+  };
+
+  const confirmToggle = async () => {
+    if (pendingToggle === null) return;
+    const ok = await mutations.cambiarEstado(
+      Number(pendingToggle.id),
+      false,
+    );
+    if (!ok) return;
+    setPendingToggle(null);
+    refreshDirectory();
+    setNotice(
+      `Estudiante «${pendingToggle.nombreCompleto}» desactivado.`,
+    );
+  };
+
   // ========================================
   // FILTRADO
   // ========================================
@@ -141,7 +259,7 @@ export function StudentsPage() {
   const filtered = useMemo(() => {
     const term = normalizar(query);
 
-    return studentsWithSummary.filter((student) => {
+    return students.filter((student) => {
       const matchesQuery =
         term === "" ||
         normalizar(
@@ -162,7 +280,7 @@ export function StudentsPage() {
 
       return matchesQuery && matchesFilter;
     });
-  }, [query, filter]);
+  }, [students, query, filter]);
 
   // Reiniciar página cuando cambian los filtros.
   useEffect(() => {
@@ -222,12 +340,6 @@ export function StudentsPage() {
   };
 
   // ========================================
-  // ESTADÍSTICAS
-  // ========================================
-
-  const summary = studentDirectorySummary;
-
-  // ========================================
   // RENDER PRINCIPAL
   // ========================================
 
@@ -250,30 +362,6 @@ export function StudentsPage() {
         <PageHeader
           title="Estudiantes"
           subtitle="Gestiona los estudiantes responsables de préstamos."
-          meta={
-            DEMO_MODE && (
-              <span
-                className="
-                  inline-flex h-8 items-center gap-2
-                  rounded-full
-                  border border-white/80
-                  bg-white/90 px-3
-                  text-[11px] font-medium
-                  text-[#405783]
-                  shadow-sm
-                "
-              >
-                <span
-                  className="
-                    h-1.5 w-1.5
-                    rounded-full bg-[#267BFA]
-                  "
-                />
-
-                Vista de demostración
-              </span>
-            )
-          }
           action={
             <Button
               variant="sidebar"
@@ -318,7 +406,7 @@ export function StudentsPage() {
           >
             {/* ESTUDIANTES REGISTRADOS */}
             <StatCardV2
-              value={summary.registrados}
+              value={summary ? summary.registrados : "—"}
               label="Estudiantes registrados"
               hint="En el directorio"
               accent="blue"
@@ -327,34 +415,65 @@ export function StudentsPage() {
 
             {/* CON PRÉSTAMOS ACTIVOS */}
             <StatCardV2
-              value={summary.conPrestamosActivos}
+              value={
+                summary ? summary.conPrestamosActivos : "—"
+              }
               label="Con préstamos activos"
-              hint="Con unidades fuera"
+              hint="Con unidades activas"
               accent="violet"
               icon={<Handshake />}
             />
 
             {/* CON INCIDENCIAS */}
             <StatCardV2
-              value={summary.conIncidencias}
-              label="Con incidencias asociadas"
-              hint="Responsabilidad atribuida"
+              value={summary ? summary.conIncidencias : "—"}
+              label="Con incidencias"
+              hint="Con responsabilidad atribuida"
               accent="orange"
               icon={<AlertTriangle />}
             />
           </section>
 
           {/* =====================================
+              AVISO DE ESTADÍSTICAS
+          ===================================== */}
+
+          {stats.status === "error" && (
+            <div
+              role="alert"
+              className="
+                flex flex-wrap items-center gap-2.5
+                rounded-[16px] border border-[#F3C9CC]
+                bg-[#FDECEE] px-4 py-2.5
+                text-[12px] font-medium text-[#B23540]
+              "
+            >
+              <AlertCircle className="h-4 w-4 shrink-0" />
+
+              <span className="min-w-0 flex-1">
+                {stats.error ??
+                  "No se pudieron cargar las estadísticas."}
+              </span>
+
+              <Button
+                variant="secondary"
+                onClick={stats.refetch}
+              >
+                Reintentar
+              </Button>
+            </div>
+          )}
+
+          {/* =====================================
               PANEL DE ESTUDIANTES
           ===================================== */}
 
           <section
-            aria-label="Directorio de estudiantes"
             className="
               min-w-0 overflow-hidden
               rounded-[20px]
               border border-white/80
-              bg-white/95
+              bg-white/90
               shadow-[0_6px_24px_rgba(31,65,122,0.06)]
               backdrop-blur-md
             "
@@ -369,80 +488,141 @@ export function StudentsPage() {
               onClear={clearAll}
             />
 
-            {/* TABLA */}
-            <StudentsTable
-              items={pageItems}
-              totalCount={studentsWithSummary.length}
-              query={query}
-              filterActive={filter !== "todos"}
-              onClearFilters={clearFilter}
-              onClearQuery={clearQuery}
-              onDetails={openDetails}
-              onEdit={openEdit}
-              onHistory={openHistory}
-            />
+            {notice !== null && (
+              <div
+                role="status"
+                className="
+                  flex items-center gap-2
+                  border-b border-[#CDEBDD]
+                  bg-[#EAF9F2]
+                  px-4 py-2
+                  text-[12px] font-medium
+                  text-[#0F7B54]
+                "
+              >
+                <CircleCheck className="h-4 w-4 shrink-0" />
+                {notice}
+              </div>
+            )}
 
-            {/* =================================
-                PAGINACIÓN
-            ================================= */}
-
-            <div
-              className="
-                flex flex-wrap items-center
-                justify-between gap-3
-                border-t border-[#E9EEF6]
-                bg-white/70
-                px-4 py-3
-                text-[12px] text-[#7385A4]
-              "
-            >
-              {/* CONTADOR */}
-              <span className="tabular-nums">
-                {resultLabel}
-              </span>
-
-              {/* NAVEGACIÓN */}
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="icon"
-                  aria-label="Página anterior de estudiantes"
-                  disabled={safePage <= 1}
-                  onClick={() =>
-                    setPage((value) =>
-                      Math.max(1, value - 1)
-                    )
-                  }
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-
-                <span
+            {mutations.error !== null &&
+              !formOpen &&
+              pendingToggle === null && (
+                <div
+                  role="alert"
                   className="
-                    min-w-[100px] text-center
-                    font-medium tabular-nums
-                    text-[#647794]
+                    flex flex-wrap items-center gap-2.5
+                    border-b border-[#F3C9CC]
+                    bg-[#FDECEE]
+                    px-4 py-2.5
+                    text-[12px] font-medium text-[#B23540]
                   "
                 >
-                  Página {safePage} de {totalPages}
-                </span>
+                  <AlertCircle className="h-4 w-4 shrink-0" />
 
-                <Button
-                  variant="icon"
-                  aria-label="Página siguiente de estudiantes"
-                  disabled={safePage >= totalPages}
-                  onClick={() =>
-                    setPage((value) =>
-                      Math.min(
-                        totalPages,
-                        value + 1
-                      )
-                    )
-                  }
+                  <span className="min-w-0 flex-1">
+                    {mutations.error}
+                  </span>
+
+                  <Button
+                    variant="secondary"
+                    onClick={mutations.clearError}
+                  >
+                    Descartar
+                  </Button>
+                </div>
+              )}
+
+            {directory.status === "loading" ? (
+              <ResourceLoading />
+            ) : directory.status === "error" ? (
+              <ResourceError
+                message={
+                  directory.error ??
+                  "No se pudo cargar el directorio de estudiantes."
+                }
+                onRetry={directory.refetch}
+              />
+            ) : (
+              <>
+                {/* TABLA */}
+                <StudentsTable
+                  items={pageItems}
+                  totalCount={filtered.length}
+                  query={query}
+                  filterActive={filter !== "todos"}
+                  onClearFilters={clearFilter}
+                  onClearQuery={clearQuery}
+                  onDetails={openDetails}
+                  onEdit={openEdit}
+                  onHistory={openHistory}
+                  onToggleActive={handleToggle}
+                  busy={mutations.saving}
+                />
+
+                {/* =============================
+                    PAGINACIÓN
+                ============================= */}
+
+                <div
+                  className="
+                    flex flex-wrap items-center
+                    justify-between gap-3
+                    border-t border-[#E9EEF6]
+                    bg-white/70
+                    px-4 py-3
+                    text-[12px] text-[#7385A4]
+                  "
                 >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
+                  {/* CONTADOR */}
+                  <span className="tabular-nums">
+                    {resultLabel}
+                  </span>
+
+                  {/* NAVEGACIÓN */}
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="icon"
+                      aria-label="Página anterior de estudiantes"
+                      disabled={safePage <= 1}
+                      onClick={() =>
+                        setPage((value) =>
+                          Math.max(1, value - 1)
+                        )
+                      }
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+
+                    <span
+                      className="
+                        min-w-[100px] text-center
+                        font-medium tabular-nums
+                        text-[#647794]
+                      "
+                    >
+                      Página {safePage} de {totalPages}
+                    </span>
+
+                    <Button
+                      variant="icon"
+                      aria-label="Página siguiente de estudiantes"
+                      disabled={safePage >= totalPages}
+                      onClick={() =>
+                        setPage((value) =>
+                          Math.min(
+                            totalPages,
+                            value + 1
+                          )
+                        )
+                      }
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
           </section>
         </div>
       </main>
@@ -455,11 +635,15 @@ export function StudentsPage() {
         open={formOpen}
         mode={formMode}
         student={editingStudent ?? undefined}
+        students={students}
+        saving={mutations.saving}
+        serverError={formOpen ? mutations.error : null}
         onClose={closeForm}
+        onSubmit={handleFormSubmit}
       />
 
       {/* =====================================
-          MODAL DETALLES / HISTORIAL
+          MODAL DE DETALLES
       ===================================== */}
 
       <StudentDetailsDialog
@@ -468,6 +652,59 @@ export function StudentsPage() {
         initialTab={detailsTab}
         onClose={closeDetails}
       />
+
+      {/* =====================================
+          CONFIRMAR DESACTIVACIÓN
+      ===================================== */}
+
+      {pendingToggle !== null && (
+        <Dialog
+          open
+          onClose={() => {
+            if (!mutations.saving) setPendingToggle(null);
+          }}
+          title="Desactivar estudiante"
+          subtitle="El estudiante dejará de aparecer como disponible para nuevos préstamos."
+          size="sm"
+          footer={
+            <>
+              <Button
+                variant="secondary"
+                disabled={mutations.saving}
+                onClick={() => setPendingToggle(null)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={mutations.saving}
+                onClick={() => void confirmToggle()}
+              >
+                {mutations.saving ? "Desactivando…" : "Desactivar"}
+              </Button>
+            </>
+          }
+        >
+          <p className="text-[13px] leading-6 text-[#435F92]">
+            ¿Seguro que quieres desactivar a
+            <strong className="text-[#1D3155]"> «{pendingToggle.nombreCompleto}»</strong>?
+          </p>
+          <p className="mt-2 text-[12px] leading-5 text-[#7385A4]">
+            No se elimina ningún registro ni su historial. Solo dejará de
+            contarse como estudiante activo del directorio.
+          </p>
+
+          {mutations.error !== null && (
+            <p
+              role="alert"
+              className="mt-3 flex items-start gap-1.5 text-[12px] text-[#B23540]"
+            >
+              <AlertCircle className="mt-px h-3.5 w-3.5 shrink-0" />
+              <span>{mutations.error}</span>
+            </p>
+          )}
+        </Dialog>
+      )}
     </div>
   );
 }
