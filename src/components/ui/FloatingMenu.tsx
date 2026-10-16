@@ -15,12 +15,13 @@ interface FloatingMenuProps {
   children: ReactNode;
 }
 
-// Los menús usan `position: fixed` con coordenadas de viewport obtenidas de
-// getBoundingClientRect(). Si se renderizan en línea, cualquier ancestro con
-// `backdrop-filter`, `filter` o `transform` pasa a ser su bloque contenedor y
-// además los recorta si tiene `overflow: hidden` -> el menú aparece recortado o
-// fuera de sitio. Se renderizan en un portal sobre <body> para que "fixed" sea
-// relativo al viewport y no queden recortados por la tabla.
+/**
+ * Menú flotante anclado a un botón y dibujado en un portal.
+ *
+ * Las tablas viven dentro de contenedores con `overflow-hidden` (y a veces
+ * `backdrop-blur`), que recortarían un menú posicionado de forma absoluta. Al
+ * montarse en `document.body` con posición `fixed`, el menú no se recorta.
+ */
 export function FloatingMenu({
   open,
   pos,

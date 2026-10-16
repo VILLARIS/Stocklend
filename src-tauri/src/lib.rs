@@ -35,7 +35,12 @@ pub fn run() {
             commands::prestamos::listar_prestamos,
             commands::prestamos::obtener_detalle_prestamo,
             commands::prestamos::obtener_estadisticas_prestamos,
-            commands::prestamos::registrar_prestamo
+            commands::prestamos::registrar_prestamo,
+            commands::devoluciones::listar_devoluciones_pendientes,
+            commands::devoluciones::obtener_detalle_devolucion,
+            commands::devoluciones::listar_historial_devoluciones,
+            commands::devoluciones::obtener_estadisticas_devoluciones,
+            commands::devoluciones::registrar_devolucion
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

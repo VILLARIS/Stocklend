@@ -465,6 +465,9 @@ fn desde_str_solo_acepta_los_tipos_previstos() {
         TipoMovimiento::AjustePositivo,
         TipoMovimiento::AjusteNegativo,
         TipoMovimiento::Prestamo,
+        TipoMovimiento::Devolucion,
+        TipoMovimiento::DanioPrestado,
+        TipoMovimiento::PerdidaPrestado,
         TipoMovimiento::ReingresoReparacion,
         TipoMovimiento::BajaDaniada,
         TipoMovimiento::BajaFaltante,
@@ -472,7 +475,7 @@ fn desde_str_solo_acepta_los_tipos_previstos() {
     for tipo in aceptados {
         assert_eq!(TipoMovimiento::desde_str(tipo.as_str()), Some(tipo));
     }
-    for rechazado in ["editar", "borrar", "devolucion", "", "ALTA"] {
+    for rechazado in ["editar", "borrar", "danio_disponible", "perdida_disponible", "", "ALTA"] {
         assert_eq!(TipoMovimiento::desde_str(rechazado), None, "{rechazado}");
     }
 }

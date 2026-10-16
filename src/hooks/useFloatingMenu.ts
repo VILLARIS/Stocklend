@@ -1,6 +1,6 @@
-// Lógica compartida de posicionamiento y cierre para los menús flotantes de la
-// tabla de inventario. Antes estaba duplicada en RowActionsMenu, UnitActionsMenu
-// y CategoryActionsMenu.
+// Lógica compartida de posicionamiento y cierre para los menús flotantes que se
+// anclan a un botón dentro de contenedores con `overflow-hidden` (tablas de
+// Inventario, Préstamos y Devoluciones).
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -45,32 +45,27 @@ export function useFloatingMenu({
 
     place();
 
-    const onResize = () => place();
-    const onPointerDown = (event: MouseEvent) => {
-      const target = event.target as Node;
+    const onWindowChange = () => place();
+    const onPointerDown = (event: PointerEvent) => {
       if (
-        !menuRef.current?.contains(target) &&
-        !buttonRef.current?.contains(target)
+        !menuRef.current?.contains(event.target as Node) &&
+        !buttonRef.current?.contains(event.target as Node)
       ) {
         setOpen(false);
       }
     };
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setOpen(false);
-        buttonRef.current?.focus();
-      }
+      if (event.key === "Escape") setOpen(false);
     };
 
-    window.addEventListener("resize", onResize);
-    window.addEventListener("scroll", onResize, true);
-    document.addEventListener("mousedown", onPointerDown);
+    window.addEventListener("resize", onWindowChange);
+    window.addEventListener("scroll", onWindowChange, true);
+    document.addEventListener("pointerdown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
-
     return () => {
-      window.removeEventListener("resize", onResize);
-      window.removeEventListener("scroll", onResize, true);
-      document.removeEventListener("mousedown", onPointerDown);
+      window.removeEventListener("resize", onWindowChange);
+      window.removeEventListener("scroll", onWindowChange, true);
+      document.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [open, place]);

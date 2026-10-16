@@ -8,8 +8,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { InventoryArticle } from "../../data/inventoryData";
-import { useFloatingMenu } from "./useFloatingMenu";
-import { FloatingMenu } from "./FloatingMenu";
+import { useFloatingMenu } from "../../hooks/useFloatingMenu";
+import { FloatingMenu } from "../ui/FloatingMenu";
 
 interface Action {
   label: string;

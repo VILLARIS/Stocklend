@@ -3,7 +3,10 @@ import { Minus, Plus } from "lucide-react";
 
 interface QuantityEditorProps {
   value: number;
+  /** Máximo permitido; nunca deja pasar cantidades por encima. */
   max: number;
+  /** Mínimo permitido (por defecto 1). Devoluciones usa 0. */
+  min?: number;
   articleName: string;
   onChange: (value: number) => void;
 }
@@ -12,6 +15,7 @@ interface QuantityEditorProps {
 export function QuantityEditor({
   value,
   max,
+  min = 1,
   articleName,
   onChange,
 }: QuantityEditorProps) {
@@ -21,14 +25,16 @@ export function QuantityEditor({
     setDraft(String(value));
   }, [value]);
 
+  const clamp = (candidate: number) => {
+    const truncated = Number.isFinite(candidate)
+      ? Math.trunc(candidate)
+      : min;
+    return Math.min(Math.max(min, truncated), Math.max(min, max));
+  };
+
   const commit = () => {
     const parsed = Number(draft);
-
-    const next =
-      draft.trim() === "" || !Number.isFinite(parsed)
-        ? 1
-        : Math.min(Math.max(1, Math.trunc(parsed)), Math.max(1, max));
-
+    const next = draft.trim() === "" ? min : clamp(parsed);
     setDraft(String(next));
     onChange(next);
   };
@@ -49,8 +55,8 @@ export function QuantityEditor({
       <button
         type="button"
         aria-label={`Restar una unidad de ${articleName}`}
-        disabled={value <= 1}
-        onClick={() => onChange(value - 1)}
+        disabled={value <= min}
+        onClick={() => onChange(Math.max(min, value - 1))}
         className="
           flex h-7 w-7 items-center justify-center
           rounded-md text-[#617794]
@@ -84,7 +90,7 @@ export function QuantityEditor({
           event.currentTarget.select();
         }}
         aria-label={`Cantidad de ${articleName}`}
-        title={`Introduce una cantidad entre 1 y ${max}`}
+        title={`Introduce una cantidad entre ${min} y ${max}`}
         className="
           h-7 w-12 rounded-md
           bg-transparent px-1
@@ -98,7 +104,7 @@ export function QuantityEditor({
         type="button"
         aria-label={`Sumar una unidad de ${articleName}`}
         disabled={value >= max}
-        onClick={() => onChange(value + 1)}
+        onClick={() => onChange(Math.min(max, value + 1))}
         className="
           flex h-7 w-7 items-center justify-center
           rounded-md text-[#617794]

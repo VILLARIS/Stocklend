@@ -4,7 +4,7 @@ import {
   Package,
 } from "lucide-react";
 
-import type { ReturnRecord } from "../../data/demoReturns";
+import type { ReturnRecord } from "../../types/returns";
 
 interface ReturnItemsListProps {
   loan: ReturnRecord;

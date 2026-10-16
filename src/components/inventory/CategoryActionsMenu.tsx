@@ -7,8 +7,8 @@ import {
   Trash2,
 } from "lucide-react";
 import type { InventoryCategory } from "../../data/inventoryData";
-import { useFloatingMenu } from "./useFloatingMenu";
-import { FloatingMenu } from "./FloatingMenu";
+import { useFloatingMenu } from "../../hooks/useFloatingMenu";
+import { FloatingMenu } from "../ui/FloatingMenu";
 
 interface CategoryActionsMenuProps {
   categoria: InventoryCategory;

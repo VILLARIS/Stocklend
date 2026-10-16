@@ -4,7 +4,8 @@ import { DataTable, type Column } from "../ui/DataTable";
 import { EmptyState } from "../ui/EmptyState";
 import { Button } from "../ui/Button";
 import { LoanActionsMenu } from "./LoanActionsMenu";
-import { formatLoanDate, totalUnidades } from "../../data/demoLoans";
+import { totalUnidades } from "../../data/demoLoans";
+import { formatLoanDate } from "../../utils/formatDate";
 import type { DemoLoan, LoanStatus } from "../../types/loans";
 
 interface LoansTableProps {

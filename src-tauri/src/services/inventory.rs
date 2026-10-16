@@ -34,12 +34,14 @@ pub const TIPOS_MOVIMIENTO: [&str; 12] = [
 pub const TIPOS_REFERENCIA: [&str; 5] =
     ["prestamo", "devolucion", "incidente", "ajuste", "anulacion"];
 
-/// Subconjunto de movimientos que esta infraestructura sabe aplicar.
+/// Transiciones que esta infraestructura sabe aplicar.
 ///
-/// El resto (`devolucion`, `danio_*`, `perdida_*`) pertenece a los módulos de
-/// Devoluciones e Incidentes y se incorporará en fases posteriores. El
-/// `prestamo` ya se aplica aquí porque lo necesita el servicio de Préstamos. Al
-/// ser un `enum`, no es posible solicitar una transición no prevista.
+/// Cubre las entradas (`alta`), las correcciones (`ajuste_*`), el préstamo y las
+/// tres vueltas que produce una devolución: en buen estado (`devolucion`), dañada
+/// (`danio_prestado`) o perdida (`perdida_prestado`), todas con origen en
+/// `prestada` (RN-30, RN-31, RN-32). Las transiciones sobre `disponible`
+/// (`danio_disponible`, `perdida_disponible`) pertenecen a la Incidencia de
+/// depósito. Al ser un `enum`, no es posible solicitar una transición no prevista.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TipoMovimiento {
     /// Entrada inicial de existencias al crear un artículo.
@@ -50,6 +52,12 @@ pub enum TipoMovimiento {
     AjusteNegativo,
     /// Presta cantidad o una unidad: disponible → prestada (RN-21, RN-53).
     Prestamo,
+    /// Devuelve en buen estado: prestada → disponible (RN-30).
+    Devolucion,
+    /// Devuelve dañado: prestada → dañada, nunca disponible (RN-31).
+    DanioPrestado,
+    /// Devuelve perdido: prestada → faltante, nunca disponible (RN-32).
+    PerdidaPrestado,
     /// Una unidad dañada vuelve a estar disponible tras repararse.
     ReingresoReparacion,
     /// Se da de baja una unidad dañada (sale del inventario).
@@ -66,6 +74,9 @@ impl TipoMovimiento {
             TipoMovimiento::AjustePositivo => "ajuste_positivo",
             TipoMovimiento::AjusteNegativo => "ajuste_negativo",
             TipoMovimiento::Prestamo => "prestamo",
+            TipoMovimiento::Devolucion => "devolucion",
+            TipoMovimiento::DanioPrestado => "danio_prestado",
+            TipoMovimiento::PerdidaPrestado => "perdida_prestado",
             TipoMovimiento::ReingresoReparacion => "reingreso_reparacion",
             TipoMovimiento::BajaDaniada => "baja_daniada",
             TipoMovimiento::BajaFaltante => "baja_faltante",
@@ -81,6 +92,9 @@ impl TipoMovimiento {
             "ajuste_positivo" => Some(TipoMovimiento::AjustePositivo),
             "ajuste_negativo" => Some(TipoMovimiento::AjusteNegativo),
             "prestamo" => Some(TipoMovimiento::Prestamo),
+            "devolucion" => Some(TipoMovimiento::Devolucion),
+            "danio_prestado" => Some(TipoMovimiento::DanioPrestado),
+            "perdida_prestado" => Some(TipoMovimiento::PerdidaPrestado),
             "reingreso_reparacion" => Some(TipoMovimiento::ReingresoReparacion),
             "baja_daniada" => Some(TipoMovimiento::BajaDaniada),
             "baja_faltante" => Some(TipoMovimiento::BajaFaltante),
@@ -170,6 +184,18 @@ pub fn calcular(
         TipoMovimiento::Prestamo => {
             nuevo.disponible -= cantidad;
             nuevo.prestada += cantidad;
+        }
+        TipoMovimiento::Devolucion => {
+            nuevo.prestada -= cantidad;
+            nuevo.disponible += cantidad;
+        }
+        TipoMovimiento::DanioPrestado => {
+            nuevo.prestada -= cantidad;
+            nuevo.danada += cantidad;
+        }
+        TipoMovimiento::PerdidaPrestado => {
+            nuevo.prestada -= cantidad;
+            nuevo.faltante += cantidad;
         }
         TipoMovimiento::ReingresoReparacion => {
             nuevo.danada -= cantidad;

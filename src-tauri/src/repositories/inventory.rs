@@ -414,6 +414,28 @@ pub fn actualizar_unidad(
     )
 }
 
+/// Devuelve una unidad al inventario tras una devolución: fija su estado final
+/// (`disponible`, `danada` o `faltante`) y la desvincula del renglón del préstamo.
+///
+/// El `CHECK` de `articulo_unidad` exige vínculo solo cuando el estado es
+/// `prestada`, así que ambos campos se escriben juntos. El vínculo con el evento
+/// de devolución no se guarda aquí porque el esquema no lo modela (queda en el
+/// historial de `movimiento_inventario`). Devuelve las filas afectadas (0 si la
+/// unidad no existe).
+pub fn devolver_unidad(
+    conn: &Connection,
+    id: i64,
+    estado: &str,
+) -> rusqlite::Result<usize> {
+    conn.execute(
+        "UPDATE articulo_unidad \
+         SET estado = ?1, prestamo_detalle_id = NULL, \
+             actualizado_en = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') \
+         WHERE id = ?2",
+        rusqlite::params![estado, id],
+    )
+}
+
 /// Indica si un código de unidad ya existe (comparación sin distinguir
 /// mayúsculas, por el `COLLATE NOCASE` de la columna), excluyendo una unidad.
 pub fn codigo_unidad_existe(

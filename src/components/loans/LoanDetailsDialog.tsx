@@ -7,7 +7,8 @@ import {
   ResourceError,
   ResourceLoading,
 } from "../students/StudentsResourceState";
-import { formatLoanDate, totalUnidades } from "../../data/demoLoans";
+import { totalUnidades } from "../../data/demoLoans";
+import { formatLoanDate } from "../../utils/formatDate";
 import { adaptLoanDetail } from "../../services/loansAdapters";
 import { useLoanDetails } from "../../hooks/useLoans";
 import type { DemoLoan } from "../../types/loans";

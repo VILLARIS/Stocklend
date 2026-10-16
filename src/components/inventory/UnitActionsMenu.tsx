@@ -6,8 +6,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { InventoryUnit } from "../../data/inventoryData";
-import { useFloatingMenu } from "./useFloatingMenu";
-import { FloatingMenu } from "./FloatingMenu";
+import { useFloatingMenu } from "../../hooks/useFloatingMenu";
+import { FloatingMenu } from "../ui/FloatingMenu";
 
 interface Action {
   label: string;

@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "../ui/Button";
-import type { ReturnStatus } from "../../data/demoReturns";
+import type { ReturnStatus } from "../../types/returns";
 
 export type ReturnFilter = "todos" | ReturnStatus;
 

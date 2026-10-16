@@ -12,7 +12,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { SectionTitle } from "./SectionTitle";
-import { QuantityEditor } from "./QuantityEditor";
+import { QuantityEditor } from "../ui/QuantityEditor";
 import { loanInputClass } from "./formStyles";
 import { normalizeText } from "../../utils/normalize";
 import type { ArticuloInventario } from "../../types/inventory";

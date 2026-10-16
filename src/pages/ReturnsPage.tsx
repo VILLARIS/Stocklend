@@ -1,9 +1,10 @@
-
 import { useEffect, useMemo, useState } from "react";
 
 import {
+  AlertCircle,
   ChevronLeft,
   ChevronRight,
+  CircleCheck,
   Plus,
 } from "lucide-react";
 
@@ -13,43 +14,38 @@ import { PageHeader } from "../components/layout/PageHeader";
 import { Button } from "../components/ui/Button";
 
 import { ReturnsStats } from "../components/returns/ReturnsStats";
-
 import {
   ReturnsToolbar,
   type ReturnFilter,
 } from "../components/returns/ReturnsToolbar";
-
 import { ReturnsTable } from "../components/returns/ReturnsTable";
-
 import { ReturnDetailsDialog } from "../components/returns/ReturnDetailsDialog";
 import { ReturnFormDialog } from "../components/returns/ReturnFormDialog";
+import {
+  ResourceError,
+  ResourceLoading,
+} from "../components/students/StudentsResourceState";
+
+import { useLoansDirectory } from "../hooks/useLoans";
+import {
+  usePendingReturns,
+  useReturnHistory,
+  useReturnMutations,
+  useReturnStats,
+} from "../hooks/useReturns";
 
 import {
-  demoReturns,
-  type ReturnRecord,
-} from "../data/demoReturns";
+  adaptCompletedLoan,
+  adaptReturns,
+  adaptReturnStats,
+  agruparDevolucionesPorPrestamo,
+} from "../services/returnsAdapters";
 
-// ========================================
-// CONFIGURACIÓN
-// ========================================
+import type { ReturnRecord } from "../types/returns";
+import type { RegistrarDevolucionInput } from "../types/returnsApi";
+import { normalizeText } from "../utils/normalize";
 
 const PAGE_SIZE = 8;
-
-// ========================================
-// UTILIDADES
-// ========================================
-
-function normalize(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim();
-}
-
-// ========================================
-// PÁGINA DE DEVOLUCIONES
-// ========================================
 
 export function ReturnsPage() {
   // ----------------------------------------
@@ -57,39 +53,93 @@ export function ReturnsPage() {
   // ----------------------------------------
 
   const [query, setQuery] = useState("");
-
-  const [filter, setFilter] =
-    useState<ReturnFilter>("todos");
-
+  const [filter, setFilter] = useState<ReturnFilter>("todos");
   const [page, setPage] = useState(1);
 
   // ----------------------------------------
-  // MODAL DE DEVOLUCIÓN
+  // MODALES
   // ----------------------------------------
 
   const [formOpen, setFormOpen] = useState(false);
-
-  const [formLoan, setFormLoan] =
-    useState<ReturnRecord | null>(null);
+  const [formLoan, setFormLoan] = useState<ReturnRecord | null>(null);
+  const [detailLoan, setDetailLoan] = useState<ReturnRecord | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   // ----------------------------------------
-  // MODAL DE DETALLES
+  // DATOS REALES
   // ----------------------------------------
 
-  const [detailLoan, setDetailLoan] =
-    useState<ReturnRecord | null>(null);
+  // Devoluciones: préstamos activos con unidades pendientes.
+  const pending = usePendingReturns();
 
-  // ========================================
+  // Préstamos: para incorporar al listado los préstamos ya cerrados
+  // (completados), que `listar_devoluciones_pendientes` no devuelve.
+  const loans = useLoansDirectory();
+
+  // Historial: cantidades devueltas reales de los préstamos cerrados.
+  const history = useReturnHistory();
+
+  // Estadísticas de Devoluciones para las tarjetas resumen.
+  const stats = useReturnStats();
+
+  // Registro real de devoluciones (escritura sobre SQLite).
+  const mutations = useReturnMutations();
+
+  // ----------------------------------------
+  // LISTADO COMBINADO
+  // ----------------------------------------
+
+  // Las filas se construyen con datos reales: pendientes (Devoluciones) y
+  // cerradas (Préstamos) enriquecidas con el historial. No se usa demostración.
+  const records = useMemo(() => {
+    const rows: ReturnRecord[] = [];
+
+    if (pending.data) {
+      rows.push(...adaptReturns(pending.data));
+    }
+
+    if (loans.data) {
+      const devoluciones = agruparDevolucionesPorPrestamo(
+        history.data ?? [],
+      );
+
+      for (const loan of loans.data) {
+        if (loan.estado !== "cerrado") continue;
+        rows.push(adaptCompletedLoan(loan, devoluciones.get(loan.id)));
+      }
+    }
+
+    // Entregas más recientes primero; el id real desempata.
+    rows.sort((a, b) => {
+      if (a.fechaEntrega !== b.fechaEntrega) {
+        return a.fechaEntrega < b.fechaEntrega ? 1 : -1;
+      }
+      return Number(b.id) - Number(a.id);
+    });
+
+    return rows;
+  }, [pending.data, loans.data, history.data]);
+
+  // ----------------------------------------
+  // RESUMEN
+  // ----------------------------------------
+
+  const summary = useMemo(
+    () => (stats.data ? adaptReturnStats(stats.data) : null),
+    [stats.data],
+  );
+
+  // ----------------------------------------
   // FILTROS
-  // ========================================
+  // ----------------------------------------
 
   const hasActiveFilters =
     query.trim() !== "" || filter !== "todos";
 
   const filtered = useMemo(() => {
-    const term = normalize(query);
+    const term = normalizeText(query);
 
-    return demoReturns.filter((loan) => {
+    return records.filter((loan) => {
       const matchesQuery =
         term === "" ||
         [
@@ -97,7 +147,7 @@ export function ReturnsPage() {
           loan.estudiante,
           loan.codigoUniversitario,
         ].some((value) =>
-          normalize(value ?? "").includes(term)
+          normalizeText(value ?? "").includes(term)
         );
 
       const matchesFilter =
@@ -106,19 +156,19 @@ export function ReturnsPage() {
 
       return matchesQuery && matchesFilter;
     });
-  }, [query, filter]);
+  }, [records, query, filter]);
 
-  // ========================================
+  // ----------------------------------------
   // REINICIAR PAGINACIÓN AL FILTRAR
-  // ========================================
+  // ----------------------------------------
 
   useEffect(() => {
     setPage(1);
   }, [query, filter]);
 
-  // ========================================
+  // ----------------------------------------
   // PAGINACIÓN
-  // ========================================
+  // ----------------------------------------
 
   const totalPages = Math.max(
     1,
@@ -153,9 +203,39 @@ export function ReturnsPage() {
             : "devoluciones"
         }`;
 
-  // ========================================
+  // ----------------------------------------
+  // ESTADO DE LA CONSULTA
+  // ----------------------------------------
+
+  // El listado depende de tres fuentes reales: pendientes, préstamos e
+  // historial. Un error en cualquiera se muestra con reintento; mientras falte
+  // alguna y no haya filas, se mantiene el indicador de carga.
+  const listError =
+    pending.status === "error"
+      ? pending.error
+      : loans.status === "error"
+        ? loans.error
+        : history.status === "error"
+          ? history.error
+          : null;
+
+  const listLoading =
+    listError === null &&
+    records.length === 0 &&
+    (pending.status === "loading" ||
+      loans.status === "loading" ||
+      history.status === "loading");
+
+  const retryAll = () => {
+    pending.refetch();
+    loans.refetch();
+    history.refetch();
+    stats.refetch();
+  };
+
+  // ----------------------------------------
   // LIMPIAR FILTROS
-  // ========================================
+  // ----------------------------------------
 
   const clearFilters = () => {
     setQuery("");
@@ -163,15 +243,34 @@ export function ReturnsPage() {
     setPage(1);
   };
 
-  // ========================================
+  // ----------------------------------------
+  // AVISO DE ÉXITO
+  // ----------------------------------------
+
+  // El aviso del registro se descarta solo.
+  useEffect(() => {
+    if (notice === null) return;
+
+    const timer = window.setTimeout(() => setNotice(null), 6000);
+
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+
+  // ----------------------------------------
   // ACCIONES: MODAL DE DEVOLUCIÓN
-  // ========================================
+  // ----------------------------------------
 
   const openReturnForm = (
     loan: ReturnRecord | null = null
   ) => {
     // Evita tener dos modales abiertos a la vez.
     setDetailLoan(null);
+
+    // El formulario parte de datos reales: se refrescan los préstamos
+    // pendientes para ofrecer el listado vigente al abrir.
+    mutations.clearError();
+    setNotice(null);
+    pending.refetch();
 
     setFormLoan(loan);
     setFormOpen(true);
@@ -182,9 +281,53 @@ export function ReturnsPage() {
     setFormLoan(null);
   };
 
-  // ========================================
+  // ----------------------------------------
+  // REGISTRAR DEVOLUCIÓN (ESCRITURA REAL)
+  // ----------------------------------------
+
+  const handleRegister = async (datos: RegistrarDevolucionInput) => {
+    const registrada = await mutations.registrar(datos);
+
+    // Si falló, el formulario permanece abierto y conserva las selecciones:
+    // solo se muestra el error real devuelto por el backend.
+    if (registrada === null) return;
+
+    setFormOpen(false);
+    setFormLoan(null);
+
+    // Se recargan las fuentes reales para reflejar el nuevo estado del
+    // préstamo, el inventario y las estadísticas.
+    pending.refetch();
+    loans.refetch();
+    history.refetch();
+    stats.refetch();
+
+    const partes: string[] = [];
+    if (registrada.cantidad_devuelta > 0) {
+      partes.push(`${registrada.cantidad_devuelta} en buen estado`);
+    }
+    if (registrada.cantidad_daniada > 0) {
+      partes.push(`${registrada.cantidad_daniada} dañadas`);
+    }
+    if (registrada.cantidad_perdida > 0) {
+      partes.push(`${registrada.cantidad_perdida} perdidas`);
+    }
+
+    const procesadas = partes.length > 0 ? partes.join(", ") : "sin unidades";
+
+    const estado =
+      registrada.prestamo_estado === "cerrado"
+        ? "préstamo cerrado"
+        : `préstamo activo con ${registrada.prestamo_unidades_pendientes} pendientes`;
+
+    setNotice(
+      `Devolución #${registrada.id} registrada para ${registrada.folio}: ${procesadas}; ${estado}.`
+    );
+  };
+
+  // ----------------------------------------
   // ACCIONES: DETALLES
-  // ========================================
+  // ----------------------------------------
 
   const openDetails = (loan: ReturnRecord) => {
     setFormOpen(false);
@@ -195,9 +338,9 @@ export function ReturnsPage() {
     setDetailLoan(null);
   };
 
-  // ========================================
+  // ----------------------------------------
   // RENDER
-  // ========================================
+  // ----------------------------------------
 
   return (
     <div
@@ -211,9 +354,7 @@ export function ReturnsPage() {
         backgroundImage: `url(${background})`,
       }}
     >
-      {/* =====================================
-          ENCABEZADO
-      ===================================== */}
+      {/* ENCABEZADO */}
 
       <div className="shrink-0">
         <PageHeader
@@ -238,8 +379,7 @@ export function ReturnsPage() {
                   bg-[#267BFA]
                 "
               />
-
-              Vista de demostración
+              Datos de la base local
             </span>
           }
           action={
@@ -254,9 +394,7 @@ export function ReturnsPage() {
         />
       </div>
 
-      {/* =====================================
-          CONTENIDO PRINCIPAL
-      ===================================== */}
+      {/* CONTENIDO PRINCIPAL */}
 
       <main
         className="
@@ -273,17 +411,37 @@ export function ReturnsPage() {
             flex-col gap-3
           "
         >
-          {/* =====================================
-              TARJETAS ESTADÍSTICAS
-          ===================================== */}
+          {/* TARJETAS ESTADÍSTICAS */}
 
-          <section aria-label="Resumen de devoluciones">
-            <ReturnsStats />
-          </section>
+          <ReturnsStats summary={summary} />
 
-          {/* =====================================
-              PANEL PRINCIPAL
-          ===================================== */}
+          {stats.status === "error" && (
+            <div
+              role="alert"
+              className="
+                flex flex-wrap items-center gap-2.5
+                rounded-[16px]
+                border border-[#F3C9CC]
+                bg-[#FDECEE]
+                px-4 py-2.5
+                text-[12px] font-medium
+                text-[#B23540]
+              "
+            >
+              <AlertCircle className="h-4 w-4 shrink-0" />
+
+              <span className="min-w-0 flex-1">
+                {stats.error ??
+                  "No se pudieron cargar las estadísticas de devoluciones."}
+              </span>
+
+              <Button variant="secondary" onClick={stats.refetch}>
+                Reintentar
+              </Button>
+            </div>
+          )}
+
+          {/* PANEL PRINCIPAL */}
 
           <section
             aria-label="Listado de devoluciones"
@@ -307,87 +465,101 @@ export function ReturnsPage() {
               onClear={clearFilters}
             />
 
-            {/* TABLA */}
-            <ReturnsTable
-              items={pageItems}
-              totalCount={demoReturns.length}
-              filtered={hasActiveFilters}
-              onClear={clearFilters}
-              onDetails={openDetails}
-              onReturn={(loan) => openReturnForm(loan)}
-            />
+            {notice !== null && (
+              <div
+                role="status"
+                className="flex items-center gap-2 border-b border-[#CDEBDD] bg-[#EAF9F2] px-4 py-2 text-[12px] font-medium text-[#0F7B54]"
+              >
+                <CircleCheck className="h-4 w-4 shrink-0" />
+                {notice}
+              </div>
+            )}
 
-            {/* =================================
-                PAGINACIÓN
-            ================================= */}
+            {listError !== null ? (
+              <ResourceError
+                message={listError}
+                onRetry={retryAll}
+              />
+            ) : listLoading ? (
+              <ResourceLoading />
+            ) : (
+              <>
+                <ReturnsTable
+                  items={pageItems}
+                  totalCount={records.length}
+                  filtered={hasActiveFilters}
+                  onClear={clearFilters}
+                  onDetails={openDetails}
+                  onReturn={(loan) => openReturnForm(loan)}
+                />
 
-            <div
-              className="
-                flex flex-wrap items-center
-                justify-between gap-3
-                border-t border-[#E9EEF6]
-                bg-white/70
-                px-4 py-3
-                text-[12px] text-[#7385A4]
-              "
-            >
-              {/* TOTAL DE RESULTADOS */}
-              <span className="tabular-nums">
-                {resultLabel}
-              </span>
+                {/* PAGINACIÓN */}
 
-              {/* BOTONES DE PAGINACIÓN */}
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="icon"
-                  aria-label="Página anterior de devoluciones"
-                  title="Página anterior"
-                  disabled={safePage <= 1}
-                  onClick={() =>
-                    setPage((previous) =>
-                      Math.max(1, previous - 1)
-                    )
-                  }
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-
-                <span
+                <div
                   className="
-                    min-w-[100px]
-                    text-center font-medium
-                    tabular-nums
-                    text-[#647794]
+                    flex flex-wrap items-center
+                    justify-between gap-3
+                    border-t border-[#E9EEF6]
+                    bg-white/70
+                    px-4 py-3
+                    text-[12px] text-[#7385A4]
                   "
                 >
-                  Página {safePage} de {totalPages}
-                </span>
+                  <span className="tabular-nums">
+                    {resultLabel}
+                  </span>
 
-                <Button
-                  variant="icon"
-                  aria-label="Página siguiente de devoluciones"
-                  title="Página siguiente"
-                  disabled={safePage >= totalPages}
-                  onClick={() =>
-                    setPage((previous) =>
-                      Math.min(
-                        totalPages,
-                        previous + 1
-                      )
-                    )
-                  }
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="icon"
+                      aria-label="Página anterior de devoluciones"
+                      title="Página anterior"
+                      disabled={safePage <= 1}
+                      onClick={() =>
+                        setPage((previous) =>
+                          Math.max(1, previous - 1)
+                        )
+                      }
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+
+                    <span
+                      className="
+                        min-w-[100px]
+                        text-center font-medium
+                        tabular-nums
+                        text-[#647794]
+                      "
+                    >
+                      Página {safePage} de {totalPages}
+                    </span>
+
+                    <Button
+                      variant="icon"
+                      aria-label="Página siguiente de devoluciones"
+                      title="Página siguiente"
+                      disabled={safePage >= totalPages}
+                      onClick={() =>
+                        setPage((previous) =>
+                          Math.min(
+                            totalPages,
+                            previous + 1
+                          )
+                        )
+                      }
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
           </section>
         </div>
       </main>
 
-      {/* =====================================
-          MODAL DE DETALLES
-      ===================================== */}
+      {/* MODAL DE DETALLES */}
 
       <ReturnDetailsDialog
         open={detailLoan !== null}
@@ -396,15 +568,18 @@ export function ReturnsPage() {
         onReturn={(loan) => openReturnForm(loan)}
       />
 
-      {/* =====================================
-          MODAL NUEVA DEVOLUCIÓN
-      ===================================== */}
+      {/* MODAL NUEVA DEVOLUCIÓN */}
 
-      <ReturnFormDialog
-        open={formOpen}
-        loan={formLoan}
-        onClose={closeReturnForm}
-      />
+      {formOpen && (
+        <ReturnFormDialog
+          open={formOpen}
+          loan={formLoan}
+          saving={mutations.saving}
+          serverError={mutations.error}
+          onClose={closeReturnForm}
+          onSubmit={handleRegister}
+        />
+      )}
     </div>
   );
 }

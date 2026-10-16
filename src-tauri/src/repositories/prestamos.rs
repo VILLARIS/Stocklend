@@ -344,3 +344,135 @@ pub fn obtener_estadisticas(
         },
     )
 }
+
+// ---------------------------------------------------------------------------
+// Renglones para el registro de devoluciones (Etapa E1). Solo lectura salvo
+// [`actualizar_cantidades_detalle`] y [`cerrar_prestamo`], que operan sobre la
+// transacción que abre el comando y nunca hacen `commit`.
+// ---------------------------------------------------------------------------
+
+/// Renglón de préstamo con los datos reales que una devolución necesita.
+///
+/// Reúne las cantidades persistidas del renglón más el `control_individual` y el
+/// nombre del artículo, tomados por sus llaves reales; `cantidad_pendiente` es la
+/// derivada de la vista `v_prestamo_detalle`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RenglonPrestamo {
+    pub id: i64,
+    pub prestamo_id: i64,
+    pub articulo_id: i64,
+    pub articulo: String,
+    pub control_individual: bool,
+    pub cantidad_prestada: i64,
+    pub cantidad_devuelta: i64,
+    pub cantidad_daniada: i64,
+    pub cantidad_perdida: i64,
+    pub cantidad_pendiente: i64,
+}
+
+/// Lee un renglón de préstamo con su artículo, o `None` si no existe.
+pub fn leer_renglon(
+    conn: &Connection,
+    id: i64,
+) -> rusqlite::Result<Option<RenglonPrestamo>> {
+    conn.query_row(
+        "SELECT pd.id, pd.prestamo_id, pd.articulo_id, a.nombre, a.control_individual, \
+                pd.cantidad_prestada, pd.cantidad_devuelta, pd.cantidad_daniada, \
+                pd.cantidad_perdida, pd.cantidad_pendiente \
+           FROM v_prestamo_detalle pd \
+           JOIN articulo a ON a.id = pd.articulo_id \
+          WHERE pd.id = ?1",
+        [id],
+        |row| {
+            Ok(RenglonPrestamo {
+                id: row.get(0)?,
+                prestamo_id: row.get(1)?,
+                articulo_id: row.get(2)?,
+                articulo: row.get(3)?,
+                control_individual: row.get::<_, i64>(4)? != 0,
+                cantidad_prestada: row.get(5)?,
+                cantidad_devuelta: row.get(6)?,
+                cantidad_daniada: row.get(7)?,
+                cantidad_perdida: row.get(8)?,
+                cantidad_pendiente: row.get(9)?,
+            })
+        },
+    )
+    .optional()
+}
+
+/// Fija las cantidades acumuladas y el estado derivado de un renglón.
+///
+/// Las cantidades ya incluyen lo que devuelve el evento en curso. El estado lo
+/// calcula el servicio de forma coherente con el `CHECK` de `prestamo_detalle`.
+/// Devuelve las filas afectadas (0 si el renglón no existe).
+pub fn actualizar_cantidades_detalle(
+    conn: &Connection,
+    id: i64,
+    cantidad_devuelta: i64,
+    cantidad_daniada: i64,
+    cantidad_perdida: i64,
+    estado: &str,
+) -> rusqlite::Result<usize> {
+    conn.execute(
+        "UPDATE prestamo_detalle \
+         SET cantidad_devuelta = ?1, cantidad_daniada = ?2, cantidad_perdida = ?3, \
+             estado = ?4 \
+         WHERE id = ?5",
+        rusqlite::params![
+            cantidad_devuelta,
+            cantidad_daniada,
+            cantidad_perdida,
+            estado,
+            id
+        ],
+    )
+}
+
+/// Estado real de un préstamo (`activo`, `cerrado`, `anulado`), o `None` si no
+/// existe.
+pub fn leer_estado_prestamo(conn: &Connection, id: i64) -> rusqlite::Result<Option<String>> {
+    conn.query_row("SELECT estado FROM prestamo WHERE id = ?1", [id], |row| {
+        row.get(0)
+    })
+    .optional()
+}
+
+/// Identificador del estudiante de un préstamo, o `None` si no existe.
+pub fn estudiante_id_prestamo(conn: &Connection, id: i64) -> rusqlite::Result<Option<i64>> {
+    conn.query_row(
+        "SELECT estudiante_id FROM prestamo WHERE id = ?1",
+        [id],
+        |row| row.get(0),
+    )
+    .optional()
+}
+
+/// Cierra un préstamo `activo` registrando el momento del cierre (RN-35).
+///
+/// Solo actúa si el préstamo sigue `activo`: un préstamo ya cerrado o anulado no
+/// se toca. Devuelve las filas afectadas.
+pub fn cerrar_prestamo(
+    conn: &Connection,
+    id: i64,
+    momento: &str,
+) -> rusqlite::Result<usize> {
+    conn.execute(
+        "UPDATE prestamo SET estado = 'cerrado', cerrado_en = ?1 \
+         WHERE id = ?2 AND estado = 'activo'",
+        rusqlite::params![momento, id],
+    )
+}
+
+/// Suma de las cantidades pendientes de todos los renglones de un préstamo.
+///
+/// Recorre la vista `v_prestamo_detalle`, así que un renglón devuelto, dañado o
+/// perdido por completo no aporta y un préstamo sin renglones pendientes da 0.
+pub fn pendiente_total(conn: &Connection, prestamo_id: i64) -> rusqlite::Result<i64> {
+    conn.query_row(
+        "SELECT COALESCE(SUM(cantidad_pendiente), 0) FROM v_prestamo_detalle \
+         WHERE prestamo_id = ?1",
+        [prestamo_id],
+        |row| row.get(0),
+    )
+}

@@ -7,9 +7,19 @@ import {
 } from "lucide-react";
 
 import { StatCardV2 } from "../ui/StatCardV2";
-import { returnsSummary } from "../../data/demoReturns";
+import type { ReturnSummary } from "../../types/returns";
 
-export function ReturnsStats() {
+/**
+ * Tarjetas resumen de Devoluciones.
+ *
+ * Recibe los totales ya calculados por props (como `LoansStats`): mientras el
+ * listado no esté disponible llega `null` y las tarjetas no inventan cifras.
+ */
+export function ReturnsStats({
+  summary,
+}: {
+  summary: ReturnSummary | null;
+}) {
   return (
     <div
       className="
@@ -19,7 +29,7 @@ export function ReturnsStats() {
       "
     >
       <StatCardV2
-        value={returnsSummary.pendientes}
+        value={summary ? summary.pendientes : "—"}
         label="Préstamos por devolver"
         hint="Con unidades pendientes"
         accent="blue"
@@ -27,7 +37,7 @@ export function ReturnsStats() {
       />
 
       <StatCardV2
-        value={returnsSummary.parciales}
+        value={summary ? summary.parciales : "—"}
         label="Devoluciones parciales"
         hint="Aún faltan unidades"
         accent="violet"
@@ -35,7 +45,7 @@ export function ReturnsStats() {
       />
 
       <StatCardV2
-        value={returnsSummary.completadas}
+        value={summary ? summary.completadas : "—"}
         label="Devoluciones completas"
         hint="Préstamos ya devueltos"
         accent="green"
@@ -43,7 +53,7 @@ export function ReturnsStats() {
       />
 
       <StatCardV2
-        value={returnsSummary.vencidas}
+        value={summary ? summary.vencidas : "—"}
         label="Pendientes vencidos"
         hint="Requieren seguimiento"
         accent="orange"

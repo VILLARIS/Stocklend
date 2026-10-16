@@ -15,6 +15,16 @@
 
 export type LoanStatus = "Activo" | "Finalizado" | "Vencido" | "Anulado";
 
+/**
+ * Referencia a una unidad física concreta: su identificador real
+ * (`articulo_unidad.id`) y su código legible. Lo aporta Devoluciones, que lee
+ * las unidades prestadas de cada renglón. Préstamos solo maneja los códigos.
+ */
+export interface LoanUnitRef {
+  id: number;
+  codigo: string;
+}
+
 /** Renglón del préstamo: un artículo y cuánto se entregó y se devolvió. */
 export interface LoanItem {
   /** Identificador real de `prestamo_detalle.id` (o id de demostración). */
@@ -34,8 +44,17 @@ export interface LoanItem {
   perdidas?: number;
   /** Estado real del renglón: `pendiente`, `parcial`, `devuelto` o `con_incidente`. */
   estadoDetalle?: string;
-  /** Códigos de unidades individuales ligadas al renglón (vacío si no aplica). */
+  /**
+   * Códigos de unidades individuales ligadas al renglón (vacío si no aplica).
+   * Cuando la fuente aporta el identificador real de cada unidad, este arreglo
+   * refleja los códigos de `unidadesDetalle`.
+   */
   unidades?: string[];
+  /**
+   * Unidades físicas con su identificador real, cuando la fuente las aporta
+   * (Devoluciones). Préstamos deja este campo sin definir.
+   */
+  unidadesDetalle?: LoanUnitRef[];
 }
 
 /** Préstamo tal como lo muestran el listado y los diálogos. */

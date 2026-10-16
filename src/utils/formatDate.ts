@@ -45,6 +45,18 @@ export function parseLocalDate(value: string): Date | null {
 }
 
 /**
+ * Formatea una fecha de préstamo en formato ISO `YYYY-MM-DD` como fecha local
+ * legible `dd/mm/aaaa`. Devuelve "—" cuando no hay fecha y el texto original si
+ * no trae el formato esperado. Se usa en las tablas de Préstamos y Devoluciones.
+ */
+export function formatLoanDate(value: string | null): string {
+  if (value === null || value === "") return "—";
+  const parts = value.split("-");
+  if (parts.length !== 3) return value;
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
+/**
  * Formatea una fecha de SQLite como fecha local legible (por defecto
  * `dd/mm/aaaa`). Devuelve una cadena vacía si la fecha no es válida.
  */
